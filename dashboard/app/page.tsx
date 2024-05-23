@@ -5,6 +5,8 @@ import InfoBox from '../components/InfoBox/InfoBox';
 import { getSimData } from './actions';
 import { SimData, emptySimData } from '@/helpers/sim_data';
 
+const precision = 3;
+
 export default function Home() {
   const [simData, setSimData] = useState<SimData>(emptySimData);
   const timeoutId = useRef<string>("");
@@ -24,12 +26,6 @@ export default function Home() {
 
   useEffect(()=>{
     fetchData();
-    // .then(()=>{
-    //   setTimeout(()=>{
-    //     console.log("refresh")
-    //     fetchData()
-    //   }, 500)
-    // })
   }, [])
 
 
@@ -48,7 +44,7 @@ export default function Home() {
           <br /><br />
           Sell Price: {simData.sellPrice}
           <br /><br />
-          Demand: {simData.demand}
+          Demand: {simData.demand.toFixed(precision)}
           <br /><br />
           Sun: {simData.sun}%
         </p>
@@ -65,7 +61,7 @@ export default function Home() {
                 <br /><br />
                 End: {end}
                 <br /><br />
-                Demand: {energy}
+                Demand: {energy.toFixed(precision)}
               </p>
             </InfoBox>
           )
