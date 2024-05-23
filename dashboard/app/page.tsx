@@ -2,18 +2,11 @@
 
 import React, {useEffect, useRef, useState} from 'react'
 import InfoBox from '../components/InfoBox/InfoBox';
-import { SimData, getSimData } from './actions';
+import { getSimData } from './actions';
+import { SimData, emptySimData } from '@/helpers/sim_data';
 
 export default function Home() {
-  const [simData, setSimData] = useState<SimData>({
-    day: 0,
-    tick: 0,
-    buyPrice: 0,
-    sellPrice: 0,
-    demand: 0,
-    sun: 0,
-    deferables: []
-  });
+  const [simData, setSimData] = useState<SimData>(emptySimData);
   const timeoutId = useRef<string>("");
 
   const fetchData = async ()=>{
