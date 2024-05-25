@@ -57,7 +57,7 @@ def print_release_store(amt, text):
         print(f"Sto {text}:", round(amt, 3))
 
 
-def exponential_moving_average(data, N):
+def get_ema(data, N):
     alpha = 2 / (N + 1)
     ema = [data[0]]  # Start with the first value
     for i in range(1, len(data)):
