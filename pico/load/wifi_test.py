@@ -3,12 +3,14 @@ import socket
 from time import sleep
 # from picozero import pico_temp_sensor, pico_led
 import machine
-import urequests as requests
+import urequests
 
 ssid = ''
 password = ''
 
-URL='https://f766-146-169-205-109.ngrok-free.app/test'
+# requests library only works with HTTP
+# not enough space on pico for SSL encryption & decryption
+URL='http://587c-185-238-220-193.ngrok-free.app'
 
 def connect():
     #Connect to WLAN
@@ -21,8 +23,12 @@ def connect():
     print(f'connection: {wlan.isconnected()}\n\nIP: {wlan.ifconfig()}')
 
 def get_test():
-    res = requests.get(URL)
+
+    res = urequests.get(URL)
+
     print(res.text)
+
+    res.close()
 
 try:
     connect()
