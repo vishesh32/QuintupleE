@@ -65,6 +65,24 @@ def get_ema(data, N):
     return ema
 
 
+def backprop(policy_network, log_probs, returns, states):
+
+    returns = torch.tensor(returns, dtype=torch.float32)
+
+    policy_loss = 0
+    for i, (log_prob, R) in enumerate(zip(log_probs, returns)):
+        policy_loss += -log_prob * R
+
+    policy_loss /= len(log_probs)
+
+    # Backward pass for policy network
+    policy_network.optimizer.zero_grad()
+    policy_loss.backward(retain_graph=True)
+    policy_network.optimizer.step()
+
+    return policy_loss.item()
+
+
 # def exponential_moving_average(values, alpha=0.1):
 #     ema_values = []
 #     ema = values[0]
