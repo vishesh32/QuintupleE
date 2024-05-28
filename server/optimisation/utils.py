@@ -81,12 +81,3 @@ def backprop(policy_network, log_probs, returns, states):
     policy_network.optimizer.step()
 
     return policy_loss.item()
-
-
-# def exponential_moving_average(values, alpha=0.1):
-#     ema_values = []
-#     ema = values[0]
-#     for value in values:
-#         ema = alpha * value + (1 - alpha) * ema
-#         ema_values.append(ema)
-#     return np.array(ema_values)

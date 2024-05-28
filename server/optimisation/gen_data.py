@@ -9,7 +9,7 @@ import time
 import math
 import random
 
-from models import Day, Deferable, Tick
+from optimisation.models import Day, Deferable, Tick
 
 # SECS_PER_DAY = 300.0 # Each tick is 5 seconds
 SECS_PER_DAY = 12.0  # Each tick is 0.2 seconds
@@ -219,3 +219,25 @@ def getTicksForDay(id):
             )
         )
     return day, ticks
+
+
+def getDayData(id):
+    day = Day.model_validate({"day": id, "deferables": getDefDemands(id)})
+    return day
+
+
+def getTickData(id, tick):
+    sun = getSunlight(tick)
+    demand = getInstDemand(id, tick)
+    sell, buy = getPrice(id, tick)
+
+    return Tick.model_validate(
+        {
+            "tick": tick,
+            "sun": sun,
+            "demand": demand,
+            "sell_price": sell,
+            "buy_price": buy,
+            "day": id,
+        }
+    )
