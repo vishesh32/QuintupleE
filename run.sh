@@ -3,3 +3,4 @@
 # wait
 
 python server/test.py
+python3 server/main.py
