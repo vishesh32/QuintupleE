@@ -1,4 +1,4 @@
-from models import Tick
+from optimisation.models import Tick
 from pymongo import MongoClient
 import torch
 

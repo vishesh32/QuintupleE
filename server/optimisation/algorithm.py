@@ -17,7 +17,7 @@ TICK_LENGTH = 300 / 60
 GAMMA = 0.99
 STACKED_NUM = 10
 MAX_FLYWHEEL_CAPACITY = 50
-MAX_IMPORT_EXPORT = 50
+MAX_IMPORT_EXPORT = 100
 
 STATE_SIZE = (
     MAX_DEFERABLES * 3 + 1 + 5 + STACKED_NUM * 3
@@ -124,6 +124,13 @@ def update_flywheel_amt(day_state, release_store_amt):
     return release_store_amt, penalty
 
 
+# def check_deferable_demands(day_state, tick):
+#     # Check total deferable demands
+#     total_energy_next_tick = 0
+#     for d in day_state["deferables"]:
+
+
+# Problem: Deferable demands not being satisfied in time, too much energy needed at the end of the day
 def update_deferable_demands(day_state, action, tick):
     deferables = day_state["deferables"]
     energy_spent = 0
@@ -139,11 +146,12 @@ def update_deferable_demands(day_state, action, tick):
         allocation = action[i + 2].item()
         # print(f"D{i}:", round(d.energy, 3), "A:", round(allocation, 3))
         if d.end == tick.tick and d.energy > 0:
+            print("Deferable demand not satisfied:", d.energy, d.start, d.end)
             energy_spent += d.energy
             allocations.append(d.energy)
             d.energy = 0
 
-        if allocation < 0:
+        elif allocation < 0:
             penalty += -allocation * NEGATIVE_ALLOCATION_PENALTY
             allocations.append(0)
             continue
@@ -243,15 +251,23 @@ def environment_step(action, tick, day_state, print_info=False):
     elif imp_exp_amt < -MAX_IMPORT_EXPORT:
         imp_exp_amt = -MAX_IMPORT_EXPORT
 
-    cost = buy_sell_to_cost(imp_exp_amt, tick)
-
     # TODO: Save rest of energy in flywheel
     if total_energy > 0:
+        if total_energy > MAX_FLYWHEEL_CAPACITY - day_state["flywheel_amt"]:
+            energy_to_sell = total_energy - (
+                MAX_FLYWHEEL_CAPACITY - day_state["flywheel_amt"]
+            )
+            imp_exp_amt -= energy_to_sell
+
+        release_store_amt -= min(
+            MAX_FLYWHEEL_CAPACITY - day_state["flywheel_amt"], total_energy
+        )
         day_state["flywheel_amt"] = min(
             MAX_FLYWHEEL_CAPACITY, day_state["flywheel_amt"] + total_energy
         )
 
     # TODO: OR sell energy
+    cost = buy_sell_to_cost(imp_exp_amt, tick)
 
     if print_info:
         print("Tick: ", tick.tick)
