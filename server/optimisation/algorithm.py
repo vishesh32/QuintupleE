@@ -15,7 +15,7 @@ MAX_DEFERABLES = 3
 MPP = 4
 TICK_LENGTH = 300 / 60
 GAMMA = 0.99
-STACKED_NUM = 10
+STACKED_NUM = 30
 MAX_FLYWHEEL_CAPACITY = 50
 MAX_IMPORT_EXPORT = 100
 
@@ -31,14 +31,22 @@ EXCEED_FLYWHEEL_PENALTY = 0
 NEGATIVE_ALLOCATION_PENALTY = 0
 OVER_ALLOCATION_PENALTY = 0
 NEGATIVE_ENERGY_PENALTY = 0
+DEFERABLE_DEADLINE_PENALTY = 0
+
+# Allocation
+ALLOCATION_BIAS = 0
+ALLOCATION_MULTIPLIER = 1
+ALLOCATION_ABSOLUTE = 1
 
 
-def simulate_day_naive(day, ticks, use_flywheel=False, export_extra=False):
+def simulate_day_naive(
+    day, ticks, satisfy_end=True, use_flywheel=False, export_extra=False
+):
     costs = []
     flywheel_amt = 0
+    day = deepcopy(day)
     for tick in ticks:
-        power = (tick.sun / 100) * MPP
-        sun_energy = power * TICK_LENGTH  # sun in percentage to joules per tick
+        sun_energy = get_sun_energy(tick)
 
         total_energy = sun_energy
 
@@ -49,50 +57,32 @@ def simulate_day_naive(day, ticks, use_flywheel=False, export_extra=False):
         total_energy -= tick.demand
 
         for deferable in day.deferables:
-            if deferable.start == tick.tick:
+            match = deferable.end if satisfy_end else deferable.start
+            if match == tick.tick:
                 total_energy -= deferable.energy
 
+        cost = 0
         if total_energy < 0:
             cost = -total_energy * tick.sell_price
         elif use_flywheel:
             flywheel_amt = min(MAX_FLYWHEEL_CAPACITY, flywheel_amt + total_energy)
         elif export_extra:
-            cost = total_energy * tick.buy_price  # Export extra energy
+            cost = -total_energy * tick.buy_price  # Export extra energy
 
         costs.append(cost)
 
     return sum(costs)
 
 
-def tick_to_history(i, ticks, yest_ticks, STACKED_NUM):
-    tick: Tick = ticks[i]
-    cur = [tick.tick, tick.demand, tick.sun, tick.buy_price, tick.sell_price]
-    for j in range(1, STACKED_NUM + 1):
-        if i - j < 0 and abs(i - j) <= len(yest_ticks):
-            prev = yest_ticks[i - j]
-            cur.extend(tick_to_vect(prev))
-            # cur.extend([0, 0, 0])
-        elif i - j >= 0:
-            prev = ticks[i - j]
-            cur.extend(tick_to_vect(prev))
-        else:
-            cur.extend([0, 0, 0])
-
-    return cur
-
-
 def cur_tick_to_vect(tick):
     return [tick.tick, tick.demand, tick.sun, tick.buy_price, tick.sell_price]
 
 
-# PENALTIES IN ACTION: Flywheel store/release invalid, Negative/over allocation
-
-
-def get_sun_energy(tick, MPP):
+def get_sun_energy(tick):
     return (tick.sun / 100) * MPP * TICK_LENGTH
 
 
-def buy_sell_to_cost(imp_exp_amt, tick):
+def import_export_to_cost(imp_exp_amt, tick):
     if imp_exp_amt < 0:
         return imp_exp_amt * tick.buy_price
     else:
@@ -124,14 +114,7 @@ def update_flywheel_amt(day_state, release_store_amt):
     return release_store_amt, penalty
 
 
-# def check_deferable_demands(day_state, tick):
-#     # Check total deferable demands
-#     total_energy_next_tick = 0
-#     for d in day_state["deferables"]:
-
-
-# Problem: Deferable demands not being satisfied in time, too much energy needed at the end of the day
-def update_deferable_demands(day_state, action, tick):
+def update_deferable_demands(day_state, action, tick, print_info=False):
     deferables = day_state["deferables"]
     energy_spent = 0
     penalty = 0
@@ -143,10 +126,15 @@ def update_deferable_demands(day_state, action, tick):
             allocations.append(0)
             continue
 
-        allocation = action[i + 2].item()
-        # print(f"D{i}:", round(d.energy, 3), "A:", round(allocation, 3))
+        allocation = (ALLOCATION_BIAS + action[i + 2].item()) * ALLOCATION_MULTIPLIER
+        if ALLOCATION_ABSOLUTE == 1:
+            allocation = abs(allocation)
+
         if d.end == tick.tick and d.energy > 0:
-            print("Deferable demand not satisfied:", d.energy, d.start, d.end)
+            if d.energy > 10:
+                penalty += d.energy * DEFERABLE_DEADLINE_PENALTY
+            if print_info:
+                print("Deferable demand not satisfied:", d.energy, d.start, d.end)
             energy_spent += d.energy
             allocations.append(d.energy)
             d.energy = 0
@@ -218,7 +206,7 @@ def environment_step(action, tick, day_state, print_info=False):
     total_penalty = 0
 
     # 1. Get total sun energy
-    sun_energy = get_sun_energy(tick, MPP)
+    sun_energy = get_sun_energy(tick)
     total_energy = sun_energy
 
     # 2. Get energy bought/sold
@@ -245,13 +233,11 @@ def environment_step(action, tick, day_state, print_info=False):
     if total_energy < 0:
         imp_exp_amt += -total_energy
 
-    # todo: Limit max import / export amount
     if imp_exp_amt > MAX_IMPORT_EXPORT:
         imp_exp_amt = MAX_IMPORT_EXPORT
     elif imp_exp_amt < -MAX_IMPORT_EXPORT:
         imp_exp_amt = -MAX_IMPORT_EXPORT
 
-    # TODO: Save rest of energy in flywheel
     if total_energy > 0:
         if total_energy > MAX_FLYWHEEL_CAPACITY - day_state["flywheel_amt"]:
             energy_to_sell = total_energy - (
@@ -266,8 +252,7 @@ def environment_step(action, tick, day_state, print_info=False):
             MAX_FLYWHEEL_CAPACITY, day_state["flywheel_amt"] + total_energy
         )
 
-    # TODO: OR sell energy
-    cost = buy_sell_to_cost(imp_exp_amt, tick)
+    cost = import_export_to_cost(imp_exp_amt, tick)
 
     if print_info:
         print("Tick: ", tick.tick)
@@ -301,7 +286,7 @@ def history_ticks_to_vect(history, STACKED_NUM):
     hist = []
     for i in range(STACKED_NUM):
         index = -1 - i
-        if index < -len(history):
+        if index < -len(history) or history[index] is None:
             hist.extend([0, 0, 0])
         else:
             hist.extend(hist_tick_to_vect(history[index]))
@@ -332,12 +317,6 @@ def predict(policy_network, env, tick, history):
     cost, penalty, actions = environment_step(action, tick, env, print_info=False)
 
     return cost, actions
-    # Environment step
-    # total_penalty += penalty
-    # penalties.append(penalty)
-    # costs.append(cost)
-    # rewards.append(-(cost + penalty))
-    # states.append(state)
 
 
 def load_policy_network_checkpoint(filename):
@@ -345,4 +324,36 @@ def load_policy_network_checkpoint(filename):
     policy_network = PolicyNetwork(STATE_SIZE, ACTION_SIZE)
     policy_network.mean_net.load_state_dict(checkpoint["mean_net"])
     policy_network.logstd = checkpoint["logstd"]
-    return policy_network
+    return policy_network, checkpoint["min"], checkpoint["min_index"]
+
+
+def compute_returns(rewards, gamma=0.99):
+    rewards = torch.tensor(rewards, dtype=torch.float32)
+    rewards = rewards - rewards.mean()
+
+    returns = []
+    R = 0
+
+    for r in reversed(rewards):
+        R = r + gamma * R
+        returns.insert(0, R)
+
+    returns = torch.tensor(returns, dtype=torch.float32)
+    mean = returns.mean()
+    std = returns.std()
+
+    returns = (returns - mean) / (std + 1e-8)  # Normalize returns
+
+    return returns
+
+
+def compute_loss(log_probs, returns):
+    # returns = torch.tensor(returns)
+    returns = (
+        torch.tensor(returns) if not isinstance(returns, torch.Tensor) else returns
+    )
+
+    loss = 0
+    for log_prob, G in zip(log_probs, returns):
+        loss += -log_prob * G
+    return loss

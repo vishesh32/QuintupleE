@@ -1,3 +1,4 @@
+import numpy as np
 from optimisation.models import Tick
 from pymongo import MongoClient
 import torch
@@ -81,3 +82,17 @@ def backprop(policy_network, log_probs, returns, states):
     policy_network.optimizer.step()
 
     return policy_loss.item()
+
+
+# def get_sun_energy(tick, MPP, TICK_LENGTH=5):
+#     return (tick.sun / 100) * MPP * TICK_LENGTH
+def costs_to_table_md(rows):
+    table_md = "| Algorithm | Average Cost (per day) |\n"
+    table_md += "|-----------|------------------------|\n"
+    for row in rows:
+        table_md += f"| {row[0]} | {round(np.mean(row[1]), 3)} |\n"
+    return table_md
+    # table_md += f"| Naive FW | {round(np.mean(naive_store_fw), 2)} |\n"
+    # table_md += f"| Naive EE | {round(np.mean(naive_export_extra), 2)} |\n"
+    # pyperclip.copy(table_md)
+    # print("Table copied to clipboard")

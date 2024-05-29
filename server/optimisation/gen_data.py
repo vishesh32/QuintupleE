@@ -2,17 +2,18 @@ import os
 
 from flask import (
     Flask,
+    redirect,
     render_template,
+    request,
     send_from_directory,
+    url_for,
 )
 import time
 import math
 import random
+from optimisation.models import Day, Tick
 
-from optimisation.models import Day, Deferable, Tick
-
-# SECS_PER_DAY = 300.0 # Each tick is 5 seconds
-SECS_PER_DAY = 12.0  # Each tick is 0.2 seconds
+SECS_PER_DAY = 300.0
 TICKS_PER_DAY = 60
 SUNRISE = 15  # Sunrise ticks after start of day
 DAY_LENGTH = 30  # Ticks between sunrise and sunset
@@ -24,9 +25,7 @@ BASE_DEMAND_PROFILE = [
     (50, 100),
     (TICKS_PER_DAY, 25),
 ]  # Piecewise definition of baseline demand
-
 BASE_DEMAND_SCALING = 0.02  # Watts per demand point
-
 DEMAND_RND_VAR = 1.0  # Random variation of instantaneous demand (wWtts)
 DEMAND_MIN = 0.0  # Minimum instantaneous demand
 
@@ -54,23 +53,6 @@ DEF_DEMANDS = (
 MIN_DEMAND_DURATION = 10
 
 app = Flask(__name__)
-
-
-@app.route("/all")
-def get_all():
-    day, tick = getTick()
-    sun = getSunlight(tick)
-    demand = getInstDemand(day, tick)
-    sell, buy = getPrice(day, tick)
-    return {
-        "day": day,
-        "tick": tick,
-        "sun": sun,
-        "demand": demand,
-        "sell_price": sell,
-        "buy_price": buy,
-        "deferables": getDefDemands(day),
-    }
 
 
 @app.route("/")
@@ -198,26 +180,31 @@ def getDefDemands(day):
     return data
 
 
+# PERSONAL
+
+
 def getTicksForDay(id):
     day = Day.model_validate({"day": id, "deferables": getDefDemands(id)})
     ticks = []
     for tick in range(TICKS_PER_DAY):
-        sun = getSunlight(tick)
-        demand = getInstDemand(id, tick)
-        sell, buy = getPrice(id, tick)
+        ticks.append(getTickData(id, tick))
+    # for tick in range(TICKS_PER_DAY):
+    #     sun = getSunlight(tick)
+    #     demand = getInstDemand(id, tick)
+    #     sell, buy = getPrice(id, tick)
 
-        ticks.append(
-            Tick.model_validate(
-                {
-                    "tick": tick,
-                    "sun": sun,
-                    "demand": demand,
-                    "sell_price": sell,
-                    "buy_price": buy,
-                    "day": id,
-                }
-            )
-        )
+    #     ticks.append(
+    #         Tick.model_validate(
+    #             {
+    #                 "tick": tick,
+    #                 "sun": sun,
+    #                 "demand": demand,
+    #                 "sell_price": sell,
+    #                 "buy_price": buy,
+    #                 "day": id,
+    #             }
+    #         )
+    #     )
     return day, ticks
 
 

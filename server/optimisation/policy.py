@@ -16,19 +16,6 @@ class ValueNetwork(nn.Module):
         return x
 
 
-# def set_seed(seed):
-#     torch.manual_seed(seed)
-#     if torch.cuda.is_available():
-#         torch.cuda.manual_seed(seed)
-#         torch.cuda.manual_seed_all(seed)
-#     torch.backends.cudnn.deterministic = True
-#     torch.backends.cudnn.benchmark = False
-
-
-# # Set the seed
-# set_seed(42)
-
-
 def build_mlp(
     state_size: int,
     action_size: int,
@@ -44,6 +31,7 @@ def build_mlp(
         in_size = hidden_size
 
     layers.append(nn.Linear(in_size, action_size))
+
     return nn.Sequential(*layers)
 
 
@@ -106,24 +94,3 @@ class PolicyNetwork:
         action = dists.sample()
         logprob = dists.log_prob(action).sum(axis=-1)
         return action, logprob
-
-    def update(self, observations, actions):
-        """
-        Updates/trains the policy
-
-        :param observations: observation(s) to query the policy
-        :param actions: actions we want the policy to imitate
-        :return:
-            dict: 'Training Loss': supervised learning loss
-        """
-
-        # define loss, etc.
-
-        # policy_actions = self.forward(observations)
-        # loss = -policy_actions.log_prob(actions).mean()  # Check this
-
-        # self.optimizer.zero_grad()
-        # loss.backward()
-        # self.optimizer.step()
-
-        # return {"training_loss": loss.to("cpu").detach().numpy()}

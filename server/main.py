@@ -24,7 +24,7 @@ SUN_TOPIC = "external/sun"
 HTTP_PERIOD = 1
 
 
-filename = "server/optimisation/checkpoints/pn_epochs1000_trajruns_10_ema100.pth"
+filename = "server/optimisation/checkpoints/pn_epochs1500_trajruns_10_ema100.pth"
 policy_network = load_policy_network_checkpoint(filename)
 
 # Test prediction
@@ -54,7 +54,12 @@ def get_day_and_tick():
     #     "https://icelec50015.azurewebsites.net/deferables"
     # ).json()
 
-    sun_data, price_data, demand_data, deferables_data = asyncio.run(parallel_get("https://icelec50015.azurewebsites.net/", ["/sun","/price","/demand","/deferables"]))
+    sun_data, price_data, demand_data, deferables_data = asyncio.run(
+        parallel_get(
+            "https://icelec50015.azurewebsites.net/",
+            ["/sun", "/price", "/demand", "/deferables"],
+        )
+    )
 
     day = Day.model_validate({"day": price_data["day"], "deferables": deferables_data})
 
@@ -80,18 +85,20 @@ try:
         client = paho.Client(paho.CallbackAPIVersion.VERSION2)
 
         # client.username_pw_set(username="quintuplee", password="solar1")
-        
+
         if client.connect("localhost", 1883, keepalive=120) != 0:
             raise Exception("Failed to connect to the broker")
-        
+
         print("Connected to broker")
 
     while True:
-
         day, tick = get_day_and_tick()
-        
+
         if prev_tick and prev_tick.tick == tick.tick and prev_tick.day == tick.day:
             continue
+
+        if prev_tick and prev_tick.tick == 59:
+            env["deferables"] = day.deferables
 
         # part that runs the start of every new tick
         if RUN_ALGO:
