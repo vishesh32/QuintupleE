@@ -1,0 +1,9 @@
+paho
+requests
+numpy
+torch
+matplotlib
+pymongo
+flask
+asyncio
+aiohttp

@@ -3,4 +3,5 @@
 # wait
 
 # python server/test.py
-python server/main.py
+python3 server/main.py
+# python3 server/parallel_get.py
