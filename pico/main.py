@@ -7,24 +7,13 @@ import ubinascii
 from wifi import init
 import json
 
-SUN_TOPIC = "external/sun"
+SUN_TOPIC = "snd/sun"
 
 MQTT_CLIENT_ID = ubinascii.hexlify(machine.unique_id())
 MQTT_BROKER = "0.tcp.eu.ngrok.io"
 MQTT_BROKER_PORT = 19663
 
 sun = -1
-
-
-# source: https://www.instructables.com/How-to-Connect-Raspberry-Pi-Pico-W-to-AWS-IoT-Core/
-# reads the key and certificate files
-# converts string into byte array
-def read_pem(file):
-    with open(file, "r") as input:
-        text = input.read().strip()
-        split_text = text.split("\n")
-        base64_text = "".join(split_text[1:-1])
-        return ubinascii.a2b_base64(base64_text)
 
 def on_mqtt_msg(topic, msg):
     topic_str = topic.decode()

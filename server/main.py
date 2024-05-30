@@ -3,7 +3,7 @@ from time import sleep
 from parallel_get import parallel_get
 
 import asyncio
-import paho.mqtt.client as paho
+# import paho.mqtt.client as paho
 import json
 import sys
 from optimisation.algorithm import (
@@ -16,8 +16,11 @@ from optimisation.gen_data import getDayData, getTickData
 from optimisation.models import Day, Tick
 import time
 
+from pymongo import MongoClient
+from mqtt_client import MClient
 
-client = None
+
+mqtt_client: MClient | None = None
 # tick = -1
 
 SUN_TOPIC = "external/sun"
@@ -25,7 +28,7 @@ HTTP_PERIOD = 1
 
 
 filename = "server/optimisation/checkpoints/pn_epochs1500_trajruns_10_ema100.pth"
-policy_network = load_policy_network_checkpoint(filename)
+# policy_network = load_policy_network_checkpoint(filename)
 
 # Test prediction
 day_id = 0
@@ -42,11 +45,10 @@ costs_per_day = []
 
 RUN_BROKER = True
 RUN_ALGO = False
+DB_LOG = False
 
 
 def get_day_and_tick():
-
-    # # TODO: make this run in parallel
     # sun_data = requests.get("https://icelec50015.azurewebsites.net/sun").json()
     # price_data = requests.get("https://icelec50015.azurewebsites.net/price").json()
     # demand_data = requests.get("https://icelec50015.azurewebsites.net/demand").json()
@@ -81,15 +83,13 @@ prev_tick = None
 cost_per_day = 0
 costs = []
 try:
-    if RUN_BROKER:
-        client = paho.Client(paho.CallbackAPIVersion.VERSION2)
-
-        # client.username_pw_set(username="quintuplee", password="solar1")
-
-        if client.connect("localhost", 1883, keepalive=120) != 0:
-            raise Exception("Failed to connect to the broker")
-
-        print("Connected to broker")
+    if DB_LOG:
+        mongo_client = MongoClient("mongodb+srv://smartgrid_user:OzVu9hnKiaJULToP@autodocs.kwrryjv.mongodb.net/?retryWrites=true&w=majority&appName=Autodocs")
+        db = mongo_client["smartgrid"]
+        day_db = db["days_live"]
+        tick_db = db["ticks_live"]
+        
+    if RUN_BROKER: mqtt_client = MClient()
 
     while True:
         day, tick = get_day_and_tick()
@@ -134,8 +134,18 @@ try:
                 print()
 
         if RUN_BROKER:
-            client.publish(SUN_TOPIC, json.dumps({"sun": tick.sun}), 0)
+            # client.publish(SUN_TOPIC, json.dumps({"sun": tick.sun}), 0)
+            mqtt_client.send_sun_data(tick.sun)
             print("Published to broker")
+
+
+        # add data to the database for each new day and algorithms decsions
+        if DB_LOG:
+            if prev_tick == None or tick.day != prev_tick.day:
+                day_db.insert_one(day.model_dump())
+            
+            # always insert - this section only runs on a new tick
+            tick_db.insert_one(tick.model_dump())
 
         prev_tick = tick
         sleep(HTTP_PERIOD)
@@ -144,5 +154,5 @@ try:
 except Exception as e:
     print("Error: ", e)
 
-    if client:
-        client.disconnect()
+    if mqtt_client:
+        mqtt_client.end()

@@ -1,6 +1,7 @@
 import network
 from time import sleep
 
+
 ssid = ''
 password = ''
 
