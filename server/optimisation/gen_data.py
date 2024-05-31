@@ -13,7 +13,8 @@ import math
 import random
 
 # from optimisation.models import Day, Tick
-from optimisation.algorithm import TICK_LENGTH
+# from optimisation.algorithm import TICK_LENGTH
+# from server.optimisation.algorithm import TICK_LENGTH
 from server.optimisation.models import Day, Tick
 
 SECS_PER_DAY = 300.0
