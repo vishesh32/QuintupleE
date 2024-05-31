@@ -11,7 +11,8 @@ from flask import (
 import time
 import math
 import random
-from optimisation.models import Day, Tick
+# from optimisation.models import Day, Tick
+from server.optimisation.models import Day, Tick
 
 SECS_PER_DAY = 300.0
 TICKS_PER_DAY = 60
