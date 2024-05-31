@@ -7,6 +7,7 @@ import asyncio
 import json
 import sys
 from optimisation.algorithm import (
+    TICK_LENGTH,
     get_sun_energy,
     load_policy_network_checkpoint,
     predict,
@@ -67,7 +68,7 @@ def get_day_and_tick():
 
     tick = Tick.model_validate(
         {
-            "tick": price_data["tick"],
+            "tick": price_data["tick"] * TICK_LENGTH,
             "sun": sun_data["sun"],
             "demand": demand_data["demand"],
             "sell_price": price_data["sell_price"],

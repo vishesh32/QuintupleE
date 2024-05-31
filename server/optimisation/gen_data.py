@@ -11,7 +11,9 @@ from flask import (
 import time
 import math
 import random
+
 # from optimisation.models import Day, Tick
+from optimisation.algorithm import TICK_LENGTH
 from server.optimisation.models import Day, Tick
 
 SECS_PER_DAY = 300.0
@@ -189,23 +191,6 @@ def getTicksForDay(id):
     ticks = []
     for tick in range(TICKS_PER_DAY):
         ticks.append(getTickData(id, tick))
-    # for tick in range(TICKS_PER_DAY):
-    #     sun = getSunlight(tick)
-    #     demand = getInstDemand(id, tick)
-    #     sell, buy = getPrice(id, tick)
-
-    #     ticks.append(
-    #         Tick.model_validate(
-    #             {
-    #                 "tick": tick,
-    #                 "sun": sun,
-    #                 "demand": demand,
-    #                 "sell_price": sell,
-    #                 "buy_price": buy,
-    #                 "day": id,
-    #             }
-    #         )
-    #     )
     return day, ticks
 
 
@@ -223,7 +208,7 @@ def getTickData(id, tick):
         {
             "tick": tick,
             "sun": sun,
-            "demand": demand,
+            "demand": demand * TICK_LENGTH,
             "sell_price": sell,
             "buy_price": buy,
             "day": id,

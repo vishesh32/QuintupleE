@@ -13,9 +13,9 @@ from copy import deepcopy
 
 MAX_DEFERABLES = 3
 MPP = 4
-TICK_LENGTH = 300 / 60
+
 GAMMA = 0.99
-STACKED_NUM = 30
+STACKED_NUM = 15
 MAX_FLYWHEEL_CAPACITY = 50
 MAX_IMPORT_EXPORT = 100
 
@@ -35,8 +35,17 @@ DEFERABLE_DEADLINE_PENALTY = 0
 
 # Allocation
 ALLOCATION_BIAS = 0
-ALLOCATION_MULTIPLIER = 1
 ALLOCATION_ABSOLUTE = 1
+ALLOCATION_MULTIPLIER = 1
+TICK_LENGTH = 5
+SUN_TICK_LENGTH = 5
+
+
+def cost_to_energy(cost, buy_price, sell_price):
+    if cost < 0:
+        return cost / sell_price
+    else:
+        return cost / buy_price
 
 
 def simulate_day_naive(
@@ -45,9 +54,9 @@ def simulate_day_naive(
     costs = []
     flywheel_amt = 0
     day = deepcopy(day)
+
     for tick in ticks:
         sun_energy = get_sun_energy(tick)
-
         total_energy = sun_energy
 
         if use_flywheel:
@@ -64,7 +73,13 @@ def simulate_day_naive(
         cost = 0
         if total_energy < 0:
             cost = -total_energy * tick.sell_price
+
         elif use_flywheel:
+            if flywheel_amt + total_energy > MAX_FLYWHEEL_CAPACITY:
+                cost = (
+                    -(flywheel_amt + total_energy - MAX_FLYWHEEL_CAPACITY)
+                    * tick.buy_price
+                )
             flywheel_amt = min(MAX_FLYWHEEL_CAPACITY, flywheel_amt + total_energy)
         elif export_extra:
             cost = -total_energy * tick.buy_price  # Export extra energy
@@ -79,7 +94,7 @@ def cur_tick_to_vect(tick):
 
 
 def get_sun_energy(tick):
-    return (tick.sun / 100) * MPP * TICK_LENGTH
+    return (tick.sun / 100) * MPP * SUN_TICK_LENGTH
 
 
 def import_export_to_cost(imp_exp_amt, tick):
@@ -131,10 +146,8 @@ def update_deferable_demands(day_state, action, tick, print_info=False):
             allocation = abs(allocation)
 
         if d.end == tick.tick and d.energy > 0:
-            if d.energy > 10:
-                penalty += d.energy * DEFERABLE_DEADLINE_PENALTY
-            if print_info:
-                print("Deferable demand not satisfied:", d.energy, d.start, d.end)
+            # if d.energy > 10:
+            #     penalty += d.energy * DEFERABLE_DEADLINE_PENALTY
             energy_spent += d.energy
             allocations.append(d.energy)
             d.energy = 0
@@ -147,8 +160,8 @@ def update_deferable_demands(day_state, action, tick, print_info=False):
         elif allocation > d.energy:
             energy_spent += d.energy
             allocations.append(d.energy)
+            d.energy = 0
             penalty += (allocation - d.energy) * OVER_ALLOCATION_PENALTY
-
         else:
             energy_spent += allocation
             allocations.append(allocation)
@@ -328,8 +341,12 @@ def load_policy_network_checkpoint(filename):
 
 
 def compute_returns(rewards, gamma=0.99):
-    rewards = torch.tensor(rewards, dtype=torch.float32)
-    rewards = rewards - rewards.mean()
+    # rewards = (
+    #     torch.tensor(rewards, dtype=torch.float32)
+    #     if isinstance(rewards, torch.tensor)
+    #     else rewards
+    # )
+    # rewards = rewards - rewards.mean()
 
     returns = []
     R = 0
