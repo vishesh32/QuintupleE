@@ -42,7 +42,6 @@ class MClient():
     def end(self):
         self.client.disconnect()
     
-    # TODO: add a way to monitor the load
     def handle_msg(self, client, userdata, message):
         msg_str = message.payload.decode()
         topic = message.topic

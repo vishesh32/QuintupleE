@@ -54,8 +54,6 @@ class MClient():
         print("Connected to Broker")
 
     
-    # TODO: add a way to monitor the load
-    
 
 # def handle_connect(client, userdata, flags, rc, o):
 #     if rc != 0: raise Exception("Failed to connect to Broker")
