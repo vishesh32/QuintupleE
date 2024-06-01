@@ -3,9 +3,6 @@ from time import sleep
 from parallel_get import parallel_get
 
 import asyncio
-# import paho.mqtt.client as paho
-import json
-import sys
 from optimisation.algorithm import (
     TICK_LENGTH,
     get_sun_energy,
@@ -19,12 +16,12 @@ import time
 
 from pymongo import MongoClient
 from mqtt_client import MClient
-
+from sim.algo_sim import gen_algo_data
 
 mqtt_client: MClient | None = None
 # tick = -1
 
-SUN_TOPIC = "external/sun"
+# SUN_TOPIC = "external/sun"
 HTTP_PERIOD = 1
 
 
@@ -46,17 +43,11 @@ costs_per_day = []
 
 RUN_BROKER = True
 RUN_ALGO = False
-DB_LOG = False
+DB_LOG = True
 
 
 def get_day_and_tick():
-    # sun_data = requests.get("https://icelec50015.azurewebsites.net/sun").json()
-    # price_data = requests.get("https://icelec50015.azurewebsites.net/price").json()
-    # demand_data = requests.get("https://icelec50015.azurewebsites.net/demand").json()
-    # deferables_data = requests.get(
-    #     "https://icelec50015.azurewebsites.net/deferables"
-    # ).json()
-
+    # TODO: add checks to make sure this does not take longer than 5s
     sun_data, price_data, demand_data, deferables_data = asyncio.run(
         parallel_get(
             "https://icelec50015.azurewebsites.net/",
@@ -87,8 +78,10 @@ try:
     if DB_LOG:
         mongo_client = MongoClient("mongodb+srv://smartgrid_user:OzVu9hnKiaJULToP@autodocs.kwrryjv.mongodb.net/?retryWrites=true&w=majority&appName=Autodocs")
         db = mongo_client["smartgrid"]
-        day_db = db["days_live"]
-        tick_db = db["ticks_live"]
+        day_db = db["days-live"]
+        tick_db = db["ticks-live"]
+        comp_db = db["component-states"]
+        algo_decs = db["algo-decisions"]
         
     if RUN_BROKER: mqtt_client = MClient()
 
@@ -100,6 +93,10 @@ try:
 
         if prev_tick and prev_tick.tick == 59:
             env["deferables"] = day.deferables
+
+        # TESTING ONLY
+        # TODO: Remove this after testing
+        algo_sim = gen_algo_data(day.day, tick.tick)
 
         # part that runs the start of every new tick
         if RUN_ALGO:
@@ -135,18 +132,29 @@ try:
                 print()
 
         if RUN_BROKER:
-            # client.publish(SUN_TOPIC, json.dumps({"sun": tick.sun}), 0)
+            # send data to correct circuit component here
             mqtt_client.send_sun_data(tick.sun)
+            mqtt_client.send_storage_smps(algo_sim.energy_store)
+            mqtt_client.send_ext_grid_smps(algo_sim.energy_import)
             print("Published to broker")
+            print(list(mqtt_client.db_data.values()))
 
 
+        comp_vals = list(mqtt_client.db_data.values())
         # add data to the database for each new day and algorithms decsions
-        if DB_LOG:
+        if DB_LOG and len(comp_vals) > 0:
             if prev_tick == None or tick.day != prev_tick.day:
                 day_db.insert_one(day.model_dump())
-            
-            # always insert - this section only runs on a new tick
+
             tick_db.insert_one(tick.model_dump())
+            comp_db.insert_many([{"day": day.day, "tick": tick.tick, **val.model_dump()} for val in comp_vals])
+            
+            # write the algorithms decisions to the db
+            # TESTING ONLY
+            # generate random data to store
+            algo_decs.insert_one(algo_sim.model_dump())
+
+            print("Written to db")
 
         prev_tick = tick
         sleep(HTTP_PERIOD)
