@@ -6,6 +6,8 @@ import numpy as np
 from optimisation.models import Tick
 from optimisation.policy import PolicyNetwork, ValueNetwork
 
+from optimisation.price_lstm import init_price_lstm
+from optimisation.utils import import_export_to_cost
 import torch
 from torch import nn, optim
 import matplotlib.pyplot as plt
@@ -19,9 +21,7 @@ STACKED_NUM = 15
 MAX_FLYWHEEL_CAPACITY = 50
 MAX_IMPORT_EXPORT = 100
 
-STATE_SIZE = (
-    MAX_DEFERABLES * 3 + 1 + 5 + STACKED_NUM * 3
-)  # 1 for flywheel_amt, 5 for cur tick info, 3 for each past tick
+
 ACTION_SIZE = (
     1 + 1 + MAX_DEFERABLES
 )  # 1 for buy/sell, 1 for store/release, 1 for each deferable
@@ -40,68 +40,41 @@ ALLOCATION_MULTIPLIER = 1
 TICK_LENGTH = 5
 SUN_TICK_LENGTH = 5
 
+# HYPERPARAMETERS
+FUTURE_TICKS = 0
 
-def cost_to_energy(cost, buy_price, sell_price):
-    if cost < 0:
-        return cost / sell_price
-    else:
-        return cost / buy_price
+HISTORY_TICK_SIZE = 1
+STATE_SIZE = (
+    MAX_DEFERABLES * 3 + 1 + 5 + STACKED_NUM * HISTORY_TICK_SIZE + FUTURE_TICKS
+)  # 1 for flywheel_amt, 5 for cur tick info, 3 for each past tick, 1 for each future price
 
 
-def simulate_day_naive(
-    day, ticks, satisfy_end=True, use_flywheel=False, export_extra=False
-):
-    costs = []
-    flywheel_amt = 0
-    day = deepcopy(day)
-
-    for tick in ticks:
-        sun_energy = get_sun_energy(tick)
-        total_energy = sun_energy
-
-        if use_flywheel:
-            total_energy += flywheel_amt
-            flywheel_amt = 0
-
-        total_energy -= tick.demand
-
-        for deferable in day.deferables:
-            match = deferable.end if satisfy_end else deferable.start
-            if match == tick.tick:
-                total_energy -= deferable.energy
-
-        cost = 0
-        if total_energy < 0:
-            cost = -total_energy * tick.sell_price
-
-        elif use_flywheel:
-            if flywheel_amt + total_energy > MAX_FLYWHEEL_CAPACITY:
-                cost = (
-                    -(flywheel_amt + total_energy - MAX_FLYWHEEL_CAPACITY)
-                    * tick.buy_price
-                )
-            flywheel_amt = min(MAX_FLYWHEEL_CAPACITY, flywheel_amt + total_energy)
-        elif export_extra:
-            cost = -total_energy * tick.buy_price  # Export extra energy
-
-        costs.append(cost)
-
-    return sum(costs)
+# Try 1 past price and 1 future price?
+price_lstm = init_price_lstm()
 
 
 def cur_tick_to_vect(tick):
     return [tick.tick, tick.demand, tick.sun, tick.buy_price, tick.sell_price]
 
 
+def hist_tick_to_vect(tick):
+    # return [tick.sun, tick.buy_price, tick.sell_price]
+    return [tick.sell_price]
+
+
+def history_ticks_to_vect(history, STACKED_NUM):
+    hist = []
+    for i in range(STACKED_NUM):
+        index = -1 - i
+        if index < -len(history) or history[index] is None:
+            hist.extend([0, 0, 0])
+        else:
+            hist.extend(hist_tick_to_vect(history[index]))
+    return hist
+
+
 def get_sun_energy(tick):
     return (tick.sun / 100) * MPP * SUN_TICK_LENGTH
-
-
-def import_export_to_cost(imp_exp_amt, tick):
-    if imp_exp_amt < 0:
-        return imp_exp_amt * tick.buy_price
-    else:
-        return imp_exp_amt * tick.sell_price
 
 
 def update_flywheel_amt(day_state, release_store_amt):
@@ -168,50 +141,6 @@ def update_deferable_demands(day_state, action, tick, print_info=False):
             d.energy -= allocation
 
     return energy_spent, penalty, allocations
-
-
-def run_simulation(ticks, yest_ticks, day, print_info=False):
-
-    day_state = {"deferables": deepcopy(day.deferables), "flywheel_amt": 0}
-
-    # print("Deferables: ", [[d.start, d.end] for d in day_state["deferables"]])
-
-    log_probs = []
-    rewards = []
-    states = []
-
-    total_penalty = 0
-    total_cost = 0
-    costs = []
-    penalties = []
-    for i, tick in enumerate(ticks):
-        state = []
-
-        # Add deferable demand info
-        deferables = day_state["deferables"]
-        for j in range(len(deferables)):
-            d = deferables[j]
-            state.extend([d.energy, d.start, d.end])
-
-        # Add store/release info
-        state.append(day_state["flywheel_amt"])
-
-        # Add history
-        state.extend(tick_to_history(i, ticks, yest_ticks, STACKED_NUM))
-
-        # Run policy network
-        action, log_prob = policy_network.get_action(torch.tensor(state))
-        log_probs.append(log_prob)
-
-        # Environment step
-        cost, penalty = environment_step(action, tick, day_state, print_info=print_info)
-        # total_penalty += penalty
-        penalties.append(penalty)
-        costs.append(cost)
-        rewards.append(-(cost + penalty))
-        states.append(state)
-
-    return log_probs, rewards, costs, penalties, states
 
 
 # LATEST
@@ -289,21 +218,6 @@ def environment_step(action, tick, day_state, print_info=False):
             "allocations": allocations,
         },
     )
-
-
-def hist_tick_to_vect(tick):
-    return [tick.sun, tick.buy_price, tick.sell_price]
-
-
-def history_ticks_to_vect(history, STACKED_NUM):
-    hist = []
-    for i in range(STACKED_NUM):
-        index = -1 - i
-        if index < -len(history) or history[index] is None:
-            hist.extend([0, 0, 0])
-        else:
-            hist.extend(hist_tick_to_vect(history[index]))
-    return hist
 
 
 def predict(policy_network, env, tick, history):
