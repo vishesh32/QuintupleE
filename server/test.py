@@ -4,11 +4,13 @@ import sys
 
 import numpy as np
 from optimisation.algorithm import (
+    ALLOCATION_MULTIPLIER,
+    MAX_ALLOCATION_TOTAL,
     get_sun_energy,
     load_policy_network_checkpoint,
     predict,
-    simulate_day_naive,
 )
+from optimisation.naive import simulate_day_naive
 from optimisation.gen_data import getDayData, getTickData
 from optimisation.models import Day, Tick
 import time
@@ -51,7 +53,7 @@ def print_postaction(actions, tick, cost):
     print()
 
 
-filename = "server/optimisation/checkpoints/e4000_r20_mul1_abs1_sta15.pth"
+filename = "server/optimisation/checkpoints/05_e2000_r20_am4_rm0_im15_sta20_abs1.pth"
 policy_network, min, min_epoch = load_policy_network_checkpoint(filename)
 
 env = {
@@ -67,6 +69,8 @@ history = []
 time.sleep(0)
 day = getDayData(day_id)
 env["deferables"] = deepcopy(day.deferables)
+print("Deferables:", [[d.energy, d.start, d.end] for d in env["deferables"]])
+
 
 for i in range(60):
     tick = getTickData(day_id, i)
@@ -79,7 +83,7 @@ for i in range(60):
     costs_for_day.append(cost)
     import_prices.append(tick.sell_price)
     export_prices.append(tick.buy_price)
-    demands.append(tick.demand)
+    demands.append(deepcopy(tick.demand))
     dd1_allocations.append(actions["allocations"][0])
     dd2_allocations.append(actions["allocations"][1])
     dd3_allocations.append(actions["allocations"][2])
@@ -88,12 +92,33 @@ for i in range(60):
 
     print_postaction(actions, tick, cost)
 
-naive_fw_end = simulate_day_naive(day, ticks, use_flywheel=True, satisfy_end=True)
+# naive_fw_end = simulate_day_naive(
+#     day,
+#     ticks,
+#     use_flywheel=True,
+#     satisfy_end=True,
+#     max_alloc_total=MAX_ALLOCATION_TOTAL,
+# )
 
-print("Min cost:", min)
-print("Epochs trained:", min_epoch)
+naive_fw_start = simulate_day_naive(
+    day,
+    ticks,
+    use_flywheel=True,
+    satisfy_end=False,
+)
+
+
+# print("Total Naive FW End:", naive_fw_end)
+# print("Min cost:", min)
+# print("Epochs trained:", min_epoch)
+print("Total Naive FW Start:", naive_fw_start)
 print("Total RL cost: ", sum(costs_for_day))
-print("Total Naive FW End cost:", naive_fw_end)
+# print(
+#     "Total Naive FW End (100):",
+#     simulate_day_naive(
+#         day, ticks, use_flywheel=True, satisfy_end=True, max_import_export=100
+#     ),
+# )
 
 
 def scale_data(data):
@@ -102,16 +127,22 @@ def scale_data(data):
 
 
 plt.title("Deferable Demands allocations")
-plt.plot(scale_data(import_prices) * 2 + 5, label="Import Price (Biased)")
+plt.plot(scale_data(import_prices) * 5 + 5, label="Import Price (Biased)")
+# plt.plot(demands, label="Demands")
 plt.plot(dd1_allocations, label="DD1 Allocation")
 plt.plot(dd2_allocations, label="DD2 Allocation")
 plt.plot(dd3_allocations, label="DD3 Allocation")
 plt.legend()
 plt.show()
 
-plt.title("Import / Export and Release / Store actions (RL)")
-plt.plot(demands, label="Demands")
 # plt.plot(import_prices, label="Import Price")
+plt.title("Import / Export and Release / Store actions (RL)")
+# allocation_demands = [
+#     dd1_allocations[i] + dd2_allocations[i] + dd3_allocations[i]
+#     for i in range(len(dd1_allocations))
+# ]
+# plt.plot(allocation_demands, label="Allocation Demands")
+plt.plot(demands, label="Demands")
 plt.plot(sun_energies, label="Sun Energy")
 plt.plot(import_export, label="Import / Export")
 plt.plot(release_store, label="Release / Store")

@@ -68,9 +68,9 @@ def get_ema(data, N):
 
 def cost_to_energy(cost, buy_price, sell_price):
     if cost < 0:
-        return cost / sell_price
-    else:
         return cost / buy_price
+    else:
+        return cost / sell_price
 
 
 def import_export_to_cost(imp_exp_amt, tick):

@@ -6,59 +6,71 @@ import numpy as np
 from optimisation.models import Tick
 from optimisation.policy import PolicyNetwork, ValueNetwork
 
-from optimisation.price_lstm import init_price_lstm
-from optimisation.utils import import_export_to_cost
+from optimisation.price_model.price_lstm import init_price_lstm, predict_future
+
+
+from optimisation.utils.deferables_utils import satisfy_deferables
+from optimisation.utils.gen_utils import import_export_to_cost
+
 import torch
-from torch import nn, optim
 import matplotlib.pyplot as plt
-from copy import deepcopy
 
 MAX_DEFERABLES = 3
 MPP = 4
-
 GAMMA = 0.99
-STACKED_NUM = 15
-MAX_FLYWHEEL_CAPACITY = 50
-MAX_IMPORT_EXPORT = 100
+MAX_FLYWHEEL_CAPACITY = 25
+MAX_IMPORT_EXPORT = 25
+MAX_IMPORT_ENERGY = 40
+MAX_ALLOCATION_TOTAL = MAX_IMPORT_ENERGY - 30  # max import / export - ~max inst demand
 
+# Action size: 1 for buy/sell, 1 for store/release, 1 for each deferable
 
-ACTION_SIZE = (
-    1 + 1 + MAX_DEFERABLES
-)  # 1 for buy/sell, 1 for store/release, 1 for each deferable
-
-# Penalties
-EXCEED_FLYWHEEL_PENALTY = 0
-NEGATIVE_ALLOCATION_PENALTY = 0
-OVER_ALLOCATION_PENALTY = 0
-NEGATIVE_ENERGY_PENALTY = 0
-DEFERABLE_DEADLINE_PENALTY = 0
 
 # Allocation
-ALLOCATION_BIAS = 0
-ALLOCATION_ABSOLUTE = 1
-ALLOCATION_MULTIPLIER = 1
 TICK_LENGTH = 5
 SUN_TICK_LENGTH = 5
 
 # HYPERPARAMETERS
 FUTURE_TICKS = 0
-
-HISTORY_TICK_SIZE = 1
+STACKED_NUM = 20
+HIST_SIZE = 1
 STATE_SIZE = (
-    MAX_DEFERABLES * 3 + 1 + 5 + STACKED_NUM * HISTORY_TICK_SIZE + FUTURE_TICKS
+    MAX_DEFERABLES * 3 + 1 + 4 + STACKED_NUM * HIST_SIZE + FUTURE_TICKS
 )  # 1 for flywheel_amt, 5 for cur tick info, 3 for each past tick, 1 for each future price
 
+# ACTION_SIZE = 1 + 1 + MAX_DEFERABLES  # Make it 1 action for allocations
+ACTION_SIZE = 1 + 1 + MAX_DEFERABLES  # Make it 1 action for allocations
 
-# Try 1 past price and 1 future price?
-price_lstm = init_price_lstm()
+# ALLOCATION_ABSOLUTE = 1
+HANDLE_OVERFLOW = 1
+ALLOCATION_BIAS = 0
+ALLOCATION_ABSOLUTE = 1
+
+ALLOCATION_MULTIPLIER = 4  # Change to 3?
+RELEASE_STORE_MULTIPLIER = 0
+IMPORT_EXPORT_MULTIPLIER = 15
+
+
+price_lstm = init_price_lstm(input_size=2)
+
+
+def future_ticks_to_vect(ticks):
+    # Ticks should be of size 10
+    if len(ticks) < price_lstm.lookback or None in ticks:
+        return [0] * FUTURE_TICKS
+
+    lookback_ticks = ticks[-price_lstm.lookback :]
+    predictions = predict_future(price_lstm, lookback_ticks, FUTURE_TICKS)
+    return predictions
 
 
 def cur_tick_to_vect(tick):
-    return [tick.tick, tick.demand, tick.sun, tick.buy_price, tick.sell_price]
+    sun_energy = get_sun_energy(tick)
+    return [tick.tick, tick.demand, sun_energy, tick.sell_price]
 
 
 def hist_tick_to_vect(tick):
-    # return [tick.sun, tick.buy_price, tick.sell_price]
+    sun_energy = get_sun_energy(tick)
     return [tick.sell_price]
 
 
@@ -67,7 +79,7 @@ def history_ticks_to_vect(history, STACKED_NUM):
     for i in range(STACKED_NUM):
         index = -1 - i
         if index < -len(history) or history[index] is None:
-            hist.extend([0, 0, 0])
+            hist.extend([0] * HIST_SIZE)
         else:
             hist.extend(hist_tick_to_vect(history[index]))
     return hist
@@ -83,7 +95,6 @@ def update_flywheel_amt(day_state, release_store_amt):
 
     # If release amount > flywheel amount, set release amount to flywheel amount and penalise
     if release_store_amt > cur_flywheel_amt:
-        penalty += (release_store_amt - cur_flywheel_amt) * EXCEED_FLYWHEEL_PENALTY
         release_store_amt = cur_flywheel_amt
 
     # Else if store amount + cur_flywheel_amt > capacity, set release_store_amt to capacity - cur_flywheel_amt and penalise
@@ -91,10 +102,7 @@ def update_flywheel_amt(day_state, release_store_amt):
         release_store_amt < 0
         and -release_store_amt + cur_flywheel_amt > MAX_FLYWHEEL_CAPACITY
     ):
-        penalty += (
-            -release_store_amt + cur_flywheel_amt - MAX_FLYWHEEL_CAPACITY
-        ) * EXCEED_FLYWHEEL_PENALTY
-        release_store_amt = MAX_FLYWHEEL_CAPACITY - cur_flywheel_amt
+        release_store_amt = -(MAX_FLYWHEEL_CAPACITY - cur_flywheel_amt)
 
     # If release_store > 0, draw energy and subtract from flywheel_amt
     day_state["flywheel_amt"] -= release_store_amt
@@ -102,45 +110,48 @@ def update_flywheel_amt(day_state, release_store_amt):
     return release_store_amt, penalty
 
 
-def update_deferable_demands(day_state, action, tick, print_info=False):
+def update_deferable_demands(
+    energy_available, day_state, action, tick, print_info=False
+):
     deferables = day_state["deferables"]
     energy_spent = 0
     penalty = 0
 
-    allocations = []
+    # allocations = []
+    energy_left = energy_available
+    allocations = satisfy_deferables(
+        tick, deferables, max_alloc_total=MAX_ALLOCATION_TOTAL
+    )
+    for a in allocations:
+        energy_left -= a
+        if a != 0:
+            # print("Default allocation not 0")
+            break
+
     for i in range(len(deferables)):
         d = deferables[i]
+
         if d.start > tick.tick:
-            allocations.append(0)
+            continue
+            # allocations.append(0)
+        if allocations[i] != 0:
             continue
 
         allocation = (ALLOCATION_BIAS + action[i + 2].item()) * ALLOCATION_MULTIPLIER
+
         if ALLOCATION_ABSOLUTE == 1:
             allocation = abs(allocation)
-
-        if d.end == tick.tick and d.energy > 0:
-            # if d.energy > 10:
-            #     penalty += d.energy * DEFERABLE_DEADLINE_PENALTY
-            energy_spent += d.energy
-            allocations.append(d.energy)
-            d.energy = 0
-
-        elif allocation < 0:
-            penalty += -allocation * NEGATIVE_ALLOCATION_PENALTY
-            allocations.append(0)
-            continue
-
-        elif allocation > d.energy:
-            energy_spent += d.energy
-            allocations.append(d.energy)
-            d.energy = 0
-            penalty += (allocation - d.energy) * OVER_ALLOCATION_PENALTY
         else:
-            energy_spent += allocation
-            allocations.append(allocation)
-            d.energy -= allocation
+            allocation = max(0, allocation)
 
-    return energy_spent, penalty, allocations
+        allocation = min(allocation, d.energy)
+        allocation = min(allocation, energy_left)
+        energy_left -= allocation
+
+        allocations[i] = allocation
+        d.energy -= allocation
+
+    return sum(allocations), penalty, allocations
 
 
 # LATEST
@@ -150,37 +161,63 @@ def environment_step(action, tick, day_state, print_info=False):
     # 1. Get total sun energy
     sun_energy = get_sun_energy(tick)
     total_energy = sun_energy
+    # print()
+    # print("-" * 20)
+    # print("Tick:", tick.tick)
+    # print("Sun E: ", round(sun_energy, 1))
 
     # 2. Get energy bought/sold
-    imp_exp_amt = action[0].item()
+    imp_exp_amt = min(action[0].item() * IMPORT_EXPORT_MULTIPLIER, MAX_IMPORT_ENERGY)
     total_energy += imp_exp_amt
+    # print("Initial Imp/Exp: ", round(imp_exp_amt, 1))
 
     # 3. Get energy stored/released
-    release_store_amt = action[1].item()
-    release_store_amt, penalty = update_flywheel_amt(day_state, release_store_amt)
-    total_penalty += penalty
-    total_energy += release_store_amt
+    if RELEASE_STORE_MULTIPLIER == 0:
+        release_store_amt = day_state["flywheel_amt"]
+        day_state["flywheel_amt"] = 0
+        total_energy += release_store_amt
+    else:
+        release_store_amt = action[1].item() * RELEASE_STORE_MULTIPLIER
+        release_store_amt, penalty = update_flywheel_amt(day_state, release_store_amt)
+        total_penalty += penalty
+        total_energy += release_store_amt
+    # print("Rel/Sto: ", round(release_store_amt, 1))
 
     # 4. Satisfy instantaneous demand
     total_energy -= tick.demand
+    # print("Inst D: ", round(tick.demand, 1))
 
     # 5. Satisfy deferable demands
+    energy_available = sun_energy + release_store_amt + MAX_IMPORT_ENERGY - tick.demand
     energy_spent, penalty, allocations = update_deferable_demands(
-        day_state, action, tick
+        energy_available, day_state, action, tick
     )
     total_penalty += penalty
-    total_energy -= energy_spent
+    total_energy -= sum(allocations)
+    # print("All: ", [round(a, 1) for a in allocations])
 
     # 6. Buy more energy if total energy < 0
     if total_energy < 0:
         imp_exp_amt += -total_energy
+        total_energy = 0
 
-    if imp_exp_amt > MAX_IMPORT_EXPORT:
-        imp_exp_amt = MAX_IMPORT_EXPORT
-    elif imp_exp_amt < -MAX_IMPORT_EXPORT:
-        imp_exp_amt = -MAX_IMPORT_EXPORT
+    # print("Imp/Exp: ", round(imp_exp_amt, 1))
+    if imp_exp_amt > MAX_IMPORT_ENERGY:
+        print("Sun E: ", round(sun_energy, 1))
+        print("Rel/Sto: ", round(release_store_amt, 1))
+        print("Ins D: ", round(tick.demand, 1))
+        # print("Def D: ", round(sum(allocations), 1))
+        print("All:", [round(a, 1) for a in allocations])
+        print("Imp/Exp Action:", action[0].item())
+        print("Imp/Exp: ", imp_exp_amt)
+        raise Exception("Exceeded max import/export amount")
+    elif imp_exp_amt < -MAX_IMPORT_ENERGY:
+        # print("Orig Imp/Exp: ", imp_exp_amt)
+        exceeded_amt = -imp_exp_amt - MAX_IMPORT_ENERGY
+        total_energy += exceeded_amt
+        imp_exp_amt = -MAX_IMPORT_ENERGY
 
-    if total_energy > 0:
+    if total_energy > 0 and HANDLE_OVERFLOW == 1:
         if total_energy > MAX_FLYWHEEL_CAPACITY - day_state["flywheel_amt"]:
             energy_to_sell = total_energy - (
                 MAX_FLYWHEEL_CAPACITY - day_state["flywheel_amt"]
@@ -196,19 +233,31 @@ def environment_step(action, tick, day_state, print_info=False):
 
     cost = import_export_to_cost(imp_exp_amt, tick)
 
-    if print_info:
-        print("Tick: ", tick.tick)
-        print("Sun E: ", round(sun_energy, 3))
-        print("Imp/Exp: ", round(imp_exp_amt, 3))
-        print("Cost: ", round(cost, 5))
-        print("Rel/Sto: ", round(release_store_amt, 3))
-        print("Ins D: ", round(tick.demand, 3))
-        print("Def D: ", round(energy_spent, 3))
-        print("E left: ", round(total_energy, 3))
-        print("Penalty: ", round(total_penalty, 3))
-        print("-" * 20)
-        print()
+    # if print_info:
+    #     print("Tick: ", tick.tick)
+    #     print("Sun E: ", round(sun_energy, 3))
+    #     print("Imp/Exp: ", round(imp_exp_amt, 3))
+    #     print("Cost: ", round(cost, 5))
+    #     print("Rel/Sto: ", round(release_store_amt, 3))
+    #     print("Ins D: ", round(tick.demand, 3))
+    #     print("Def D: ", round(energy_spent, 3))
+    #     print("E left: ", round(total_energy, 3))
+    #     print("Penalty: ", round(total_penalty, 3))
+    #     print("-" * 20)
+    #     print()
 
+    # Check balance of energy
+    balance = (
+        sun_energy + imp_exp_amt + release_store_amt - tick.demand - sum(allocations)
+    )
+    if balance > 1e-8:
+        print("Sun E: ", round(sun_energy, 1))
+        print("Imp/Exp: ", round(imp_exp_amt, 1))
+        print("Rel/Sto: ", round(release_store_amt, 1))
+        print("Inst D: ", round(tick.demand, 1))
+        print("All: ", [round(a, 1) for a in allocations])
+        print("Balance: ", balance)
+        raise ("Energy not balanced")
     return (
         cost,
         total_penalty,
@@ -238,6 +287,9 @@ def predict(policy_network, env, tick, history):
     # Add history
     state.extend(history_ticks_to_vect(history, STACKED_NUM))
 
+    if FUTURE_TICKS > 0:
+        state.extend(future_ticks_to_vect(history + [tick]))
+
     # Run policy network
     action, log_prob = policy_network.get_action(torch.tensor(state))
 
@@ -260,7 +312,7 @@ def compute_returns(rewards, gamma=0.99):
     #     if isinstance(rewards, torch.tensor)
     #     else rewards
     # )
-    # rewards = rewards - rewards.mean()
+    rewards = rewards - rewards.mean()
 
     returns = []
     R = 0

@@ -1,7 +1,9 @@
 from copy import deepcopy
 from optimisation.gen_data import getDayData, getTickData, getTicksForDay
-from optimisation.algorithm import predict, simulate_day_naive
-from optimisation.utils import get_ema
+from optimisation.algorithm import predict
+from optimisation.naive import simulate_day_naive
+from optimisation.utils.gen_utils import get_ema
+
 import numpy as np
 import matplotlib.pyplot as plt
 
