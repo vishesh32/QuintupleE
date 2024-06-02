@@ -53,7 +53,7 @@ def print_postaction(actions, tick, cost):
     print()
 
 
-filename = "server/optimisation/checkpoints/05_e2000_r20_am4_rm0_im15_sta20_abs1.pth"
+filename = "server/optimisation/checkpoints/04_e5000_r50_am2_rm0_im10_sta20_abs1.pth"
 policy_network, min, min_epoch = load_policy_network_checkpoint(filename)
 
 env = {

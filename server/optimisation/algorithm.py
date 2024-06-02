@@ -38,17 +38,18 @@ STATE_SIZE = (
     MAX_DEFERABLES * 3 + 1 + 4 + STACKED_NUM * HIST_SIZE + FUTURE_TICKS
 )  # 1 for flywheel_amt, 5 for cur tick info, 3 for each past tick, 1 for each future price
 
-# ACTION_SIZE = 1 + 1 + MAX_DEFERABLES  # Make it 1 action for allocations
 ACTION_SIZE = 1 + 1 + MAX_DEFERABLES  # Make it 1 action for allocations
+# ACTION_SIZE = 1 + 1 + 1  # 1 for import/export, 1 for store/release, 1 allocation total
 
 # ALLOCATION_ABSOLUTE = 1
 HANDLE_OVERFLOW = 1
 ALLOCATION_BIAS = 0
 ALLOCATION_ABSOLUTE = 1
 
-ALLOCATION_MULTIPLIER = 4  # Change to 3?
 RELEASE_STORE_MULTIPLIER = 0
-IMPORT_EXPORT_MULTIPLIER = 15
+# Try 2 & 5
+ALLOCATION_MULTIPLIER = 2
+IMPORT_EXPORT_MULTIPLIER = 10
 
 
 price_lstm = init_price_lstm(input_size=2)
@@ -110,11 +111,76 @@ def update_flywheel_amt(day_state, release_store_amt):
     return release_store_amt, penalty
 
 
+def update_deferable_demands_old(
+    energy_available, day_state, action, tick, print_info=False
+):
+
+    deferables = day_state["deferables"]
+    energy_left = energy_available
+    allocations = satisfy_deferables(
+        tick, deferables, max_alloc_total=MAX_ALLOCATION_TOTAL
+    )
+
+    if ALLOCATION_ABSOLUTE == 1:
+        action = abs(action[2].item())
+    else:
+        action = max(0, action[2].item())
+
+    alloc_action = min(energy_left - sum(allocations), action * ALLOCATION_MULTIPLIER)
+    total = 0
+
+    end_to_indices = {}
+    indices = []
+    for i, a in enumerate(allocations):
+        if a != 0:
+            energy_left -= a
+            continue
+        d = deferables[i]
+        if d.start <= tick.tick and d.end >= tick.tick:
+            if d.end not in end_to_indices:
+                end_to_indices[d.end] = []
+
+            end_to_indices[d.end].append(i)
+            indices.append(i)
+
+    # # SIMPLE SPLITTING
+    # total = sum([deferables[i].energy for i in indices])
+    # if total == 0:
+    #     return sum(allocations), 0, allocations
+
+    # for i in indices:
+    #     d = deferables[i]
+    #     energy_used = (d.energy / total) * alloc_action
+    #     allocations[i] = min(d.energy, energy_used)
+    #     d.energy -= allocations[i]
+    # return sum(allocations), 0, allocations
+
+    # SPLITTING BY END TIME
+    end_to_indices = dict(sorted(end_to_indices.items(), key=lambda x: x[0]))
+    # print("End to indices:", end_to_indices)
+    for k, v in end_to_indices.items():
+        total = sum([deferables[index].energy for index in v])
+
+        if alloc_action <= 0 or total == 0:
+            break
+
+        used = 0
+
+        for index in v:
+            d = deferables[index]
+            energy_used = (d.energy / total) * alloc_action
+            allocations[index] = min(d.energy, energy_used)
+            d.energy -= allocations[index]
+            used += allocations[index]
+        alloc_action -= used
+
+    return sum(allocations), 0, allocations
+
+
 def update_deferable_demands(
     energy_available, day_state, action, tick, print_info=False
 ):
     deferables = day_state["deferables"]
-    energy_spent = 0
     penalty = 0
 
     # allocations = []
@@ -131,10 +197,7 @@ def update_deferable_demands(
     for i in range(len(deferables)):
         d = deferables[i]
 
-        if d.start > tick.tick:
-            continue
-            # allocations.append(0)
-        if allocations[i] != 0:
+        if d.start > tick.tick or allocations[i] != 0:
             continue
 
         allocation = (ALLOCATION_BIAS + action[i + 2].item()) * ALLOCATION_MULTIPLIER
@@ -202,7 +265,7 @@ def environment_step(action, tick, day_state, print_info=False):
         total_energy = 0
 
     # print("Imp/Exp: ", round(imp_exp_amt, 1))
-    if imp_exp_amt > MAX_IMPORT_ENERGY:
+    if int(imp_exp_amt) > MAX_IMPORT_ENERGY:
         print("Sun E: ", round(sun_energy, 1))
         print("Rel/Sto: ", round(release_store_amt, 1))
         print("Ins D: ", round(tick.demand, 1))
