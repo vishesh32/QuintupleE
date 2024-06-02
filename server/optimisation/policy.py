@@ -44,10 +44,11 @@ class PolicyNetwork:
         self,
         state_size: int,
         action_size: int,
-        n_layers: int = 6,
+        n_layers: int = 4,
         hidden_size: int = 128,
         learning_rate=1e-4,
-        training=True,
+        training=False,
+        epsilon=1,
         # nn_baseline=False,
         **kwargs
     ):
@@ -61,6 +62,7 @@ class PolicyNetwork:
 
         self.learning_rate = learning_rate
         self.training = training
+        self.epsilon = epsilon
         # self.nn_baseline = nn_baseline
 
         # NETWORK
@@ -91,6 +93,16 @@ class PolicyNetwork:
 
     def get_action(self, state: torch.FloatTensor):
         dists = self.forward(state)
-        action = dists.sample()
+        if self.training:
+            action = dists.sample()
+        else:
+            action = dists.mean
+
         logprob = dists.log_prob(action).sum(axis=-1)
         return action, logprob
+
+
+# epsilon_noise = torch.randn_like(action) * self.epsilon
+# action_with_noise = action + epsilon_noise
+# logprob = dists.log_prob(action_with_noise).sum(axis=-1)
+# return action_with_noise, logprob

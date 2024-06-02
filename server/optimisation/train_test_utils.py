@@ -1,7 +1,9 @@
 from copy import deepcopy
 from optimisation.gen_data import getDayData, getTickData, getTicksForDay
-from optimisation.algorithm import predict, simulate_day_naive
-from optimisation.utils import get_ema
+from optimisation.algorithm import predict
+from optimisation.naive import simulate_day_naive
+from optimisation.utils.gen_utils import get_ema
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -61,19 +63,24 @@ def run_validation(start, number_of_days, policy_network, naive_params):
 
 def plot_test_results(results, naive_costs, naive_params, basename):
     rl_costs = [r["cost"] for r in results]
-
-    ema_rl_costs = get_ema(rl_costs, 100)
+    ema_amount = 100
+    ema_rl_costs = get_ema(rl_costs, ema_amount)
     min_cost = np.min(ema_rl_costs)
     min_epoch = np.argmin(ema_rl_costs)
 
     print(f"Min cost: {round(min_cost, 3)} at epoch {min_epoch}")
 
     plt.plot(ema_rl_costs, label="RL")
-    plt.plot(get_ema(naive_costs, 100), label=get_naive_label(naive_params))
+    plt.plot(get_ema(naive_costs, ema_amount), label=get_naive_label(naive_params))
     plt.xlabel("Epochs (days)")
     plt.ylabel("Cost")
     plt.title("Training cost over days (ema=100)")
 
+    # mid_y = max(get_ema(naive_costs, ema_amount)) // 2
+    # plt.text(0, mid_y,
+    # f'''Average RL cost: {round(np.mean(rl_costs), 2)}
+    # Average Naive cost: {round(np.mean(naive_costs), 2)}''',
+    #         bbox=dict(facecolor='white', alpha=0.5))
     plt.scatter(min_epoch, min_cost, color="red", zorder=5)
     plt.text(
         min_epoch,

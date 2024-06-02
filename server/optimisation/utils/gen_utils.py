@@ -66,26 +66,20 @@ def get_ema(data, N):
     return ema
 
 
-def backprop(policy_network, log_probs, returns, states):
-
-    returns = torch.tensor(returns, dtype=torch.float32)
-
-    policy_loss = 0
-    for i, (log_prob, R) in enumerate(zip(log_probs, returns)):
-        policy_loss += -log_prob * R
-
-    policy_loss /= len(log_probs)
-
-    # Backward pass for policy network
-    policy_network.optimizer.zero_grad()
-    policy_loss.backward(retain_graph=True)
-    policy_network.optimizer.step()
-
-    return policy_loss.item()
+def cost_to_energy(cost, buy_price, sell_price):
+    if cost < 0:
+        return cost / buy_price
+    else:
+        return cost / sell_price
 
 
-# def get_sun_energy(tick, MPP, TICK_LENGTH=5):
-#     return (tick.sun / 100) * MPP * TICK_LENGTH
+def import_export_to_cost(imp_exp_amt, tick):
+    if imp_exp_amt < 0:
+        return imp_exp_amt * tick.buy_price
+    else:
+        return imp_exp_amt * tick.sell_price
+
+
 def costs_to_table_md(rows):
     table_md = "| Algorithm | Average Cost (per day) |\n"
     table_md += "|-----------|------------------------|\n"
