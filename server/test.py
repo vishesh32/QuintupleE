@@ -10,7 +10,7 @@ from optimisation.algorithm import (
     load_policy_network_checkpoint,
     predict,
 )
-from optimisation.naive import simulate_day_naive
+from optimisation.naive import simulate_day_naive, trend_prediction
 from optimisation.gen_data import getDayData, getTickData
 from optimisation.models import Day, Tick
 import time
@@ -92,13 +92,6 @@ for i in range(60):
 
     print_postaction(actions, tick, cost)
 
-# naive_fw_end = simulate_day_naive(
-#     day,
-#     ticks,
-#     use_flywheel=True,
-#     satisfy_end=True,
-#     max_alloc_total=MAX_ALLOCATION_TOTAL,
-# )
 
 naive_fw_start = simulate_day_naive(
     day,
@@ -106,48 +99,41 @@ naive_fw_start = simulate_day_naive(
     use_flywheel=True,
     satisfy_end=False,
 )
+trend_costs = trend_prediction(deepcopy(day), ticks)
 
 
 # print("Total Naive FW End:", naive_fw_end)
 # print("Min cost:", min)
 # print("Epochs trained:", min_epoch)
 print("Total Naive FW Start:", naive_fw_start)
+print("Total Trend cost:", sum(trend_costs))
 print("Total RL cost: ", sum(costs_for_day))
-# print(
-#     "Total Naive FW End (100):",
-#     simulate_day_naive(
-#         day, ticks, use_flywheel=True, satisfy_end=True, max_import_export=100
-#     ),
-# )
-
-# Plot sun energy, price, inst demand, and deferable demands
-# Create the plot
 
 
-def scale_data(data):
-    data = np.array(data)
-    return data / (data.max() - data.min())
+# def scale_data(data):
+#     data = np.array(data)
+#     return data / (data.max() - data.min())
 
 
-plt.title("Deferable Demands allocations")
-plt.plot(scale_data(import_prices) * 5 + 5, label="Import Price (Biased)")
+# plt.title("Deferable Demands allocations")
+# # plt.plot(scale_data(import_prices) * 5 + 5, label="Import Price (Biased)")
+# # plt.plot(demands, label="Demands")
+# plt.plot(dd1_allocations, label="DD1 Allocation")
+# plt.plot(dd2_allocations, label="DD2 Allocation")
+# plt.plot(dd3_allocations, label="DD3 Allocation")
+# plt.legend()
+# plt.show()
+
+# # plt.plot(import_prices, label="Import Price")
+# plt.title("Import / Export and Release / Store actions (RL)")
+# # allocation_demands = [
+# #     dd1_allocations[i] + dd2_allocations[i] + dd3_allocations[i]
+# #     for i in range(len(dd1_allocations))
+# # ]
+# # plt.plot(allocation_demands, label="Allocation Demands")
 # plt.plot(demands, label="Demands")
-plt.plot(dd1_allocations, label="DD1 Allocation")
-plt.plot(dd2_allocations, label="DD2 Allocation")
-plt.plot(dd3_allocations, label="DD3 Allocation")
-plt.legend()
-plt.show()
-
-# plt.plot(import_prices, label="Import Price")
-plt.title("Import / Export and Release / Store actions (RL)")
-# allocation_demands = [
-#     dd1_allocations[i] + dd2_allocations[i] + dd3_allocations[i]
-#     for i in range(len(dd1_allocations))
-# ]
-# plt.plot(allocation_demands, label="Allocation Demands")
-plt.plot(demands, label="Demands")
-plt.plot(sun_energies, label="Sun Energy")
-plt.plot(import_export, label="Import / Export")
-plt.plot(release_store, label="Release / Store")
-plt.legend()
-plt.show()
+# plt.plot(sun_energies, label="Sun Energy")
+# plt.plot(import_export, label="Import / Export")
+# plt.plot(release_store, label="Release / Store")
+# plt.legend()
+# plt.show()
