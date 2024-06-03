@@ -159,7 +159,7 @@ def getPrice(day, tick):
     sell = int(
         BASE_PRICE
         + SupplyVsDemand * PRICE_SOLAR_DEP
-        # + random.gauss(0, 1) * PRICE_RND_VAR
+        + random.gauss(0, 1) * PRICE_RND_VAR
     )
     if sell < PRICE_MIN:
         sell = PRICE_MIN

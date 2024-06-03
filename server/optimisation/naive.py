@@ -1,5 +1,7 @@
 from copy import deepcopy
 
+import numpy as np
+
 from optimisation.algorithm import (
     MAX_FLYWHEEL_CAPACITY,
     MAX_IMPORT_ENERGY,
@@ -81,11 +83,15 @@ PRICE_TREND = [
 
 
 # PRICE_THRESHOLD = 30
-EXPORT_THRESHOLD = 60
+EXPORT_THRESHOLD = 146
 
 
 def trend_prediction(
-    day, ticks, max_alloc_total=MAX_ALLOCATION_TOTAL, price_threshold=PRICE_THRESHOLD
+    day,
+    ticks,
+    max_alloc_total=MAX_ALLOCATION_TOTAL,
+    price_threshold=PRICE_THRESHOLD,
+    export_threshold=None,
 ):
     # 0-10: buy
     # 10-20: sell
@@ -111,12 +117,12 @@ def trend_prediction(
 
         # Import / Export amount
         imp_exp_amt = 0
-        # exporting = False
-        # if tick.sell_price > EXPORT_THRESHOLD:
-        #     # print("Exporting due to high prices")
-        #     exporting = True
-        #     imp_exp_amt = -total_energy
-        #     total_energy = 0
+        exporting = False
+        if export_threshold != None and tick.sell_price > export_threshold:
+            # print("Exporting due to high prices")
+            exporting = True
+            imp_exp_amt = max(-total_energy, -MAX_IMPORT_ENERGY)
+            total_energy -= abs(imp_exp_amt)
 
         # print("Imp Exp Amt Before:", imp_exp_amt)
         total_energy -= tick.demand
@@ -140,6 +146,8 @@ def trend_prediction(
                 allocations[i] = min(energy_left, d.energy)
                 d.energy -= allocations[i]
                 energy_left -= allocations[i]
+
+        total_energy -= sum(allocations)
 
         cost = 0
         if total_energy < 0:
@@ -175,6 +183,9 @@ def trend_prediction(
         imp_exp.append(cost_to_energy(cost, tick.buy_price, tick.sell_price))
         costs.append(cost)
 
+    # plt.plot([tick.sell_price for tick in ticks], label="Sell Price")
+    # plt.plot(np.array(costs) / 10, label="Cost")
+    # plt.plot([tick.sell_price for tick in ticks], label="Sell Price")
     # plt.plot([a[0] for a in all_allocations], label="Deferable 1")
     # plt.plot([a[1] for a in all_allocations], label="Deferable 2")
     # plt.plot([a[2] for a in all_allocations], label="Deferable 3")
@@ -182,6 +193,7 @@ def trend_prediction(
     # plt.show()
 
     # plt.plot(sun_energies, label="Sun Energy")
+    # plt.plot([tick.sell_price for tick in ticks], label="Sell Price")
     # plt.plot(flywheel_usage, label="Flywheel Usage")
     # plt.plot(imp_exp, label="Import / Export")
     # plt.legend()

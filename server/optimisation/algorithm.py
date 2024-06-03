@@ -46,11 +46,11 @@ HANDLE_OVERFLOW = 1
 ALLOCATION_BIAS = 0
 ALLOCATION_ABSOLUTE = 1
 
-RELEASE_STORE_MULTIPLIER = 0
+RELEASE_STORE_MULTIPLIER = 8
 # Try 2 & 5
 ALLOCATION_MULTIPLIER = 2
 IMPORT_EXPORT_MULTIPLIER = 10
-PRICE_THRESHOLD = 20
+PRICE_THRESHOLD = 11
 USE_TREND_FOR_ALLOCATION = 1
 
 price_lstm = init_price_lstm(input_size=2)
@@ -285,13 +285,13 @@ def environment_step(action, tick, day_state, print_info=False):
 
     # 5. Satisfy deferable demands
     energy_available = sun_energy + release_store_amt + MAX_IMPORT_ENERGY - tick.demand
-    energy_spent, penalty, allocations = update_deferable_demands(
-        energy_available, day_state, action, tick
-    )
-
-    # energy_spent, penalty, allocations = update_deferable_demands_trend(
+    # energy_spent, penalty, allocations = update_deferable_demands(
     #     energy_available, day_state, action, tick
     # )
+
+    energy_spent, penalty, allocations = update_deferable_demands_trend(
+        energy_available, day_state, action, tick
+    )
     total_penalty += penalty
     total_energy -= sum(allocations)
     # print("All: ", [round(a, 1) for a in allocations])
