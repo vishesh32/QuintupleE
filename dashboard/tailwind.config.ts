@@ -14,7 +14,7 @@ const config: Config = {
         "secondary": "#ffffff",
       },
       boxShadow: {
-        "info-box": "0px 8px 54.7px 0px rgba(0, 0, 0, 0.38)",
+        "card": "0px 4px 12px 0px rgba(0, 0, 0, 0.25);",
       }
     },
   },
