@@ -120,6 +120,9 @@ print("Total RL cost: ", sum(costs_for_day))
 #     ),
 # )
 
+# Plot sun energy, price, inst demand, and deferable demands
+# Create the plot
+
 
 def scale_data(data):
     data = np.array(data)
