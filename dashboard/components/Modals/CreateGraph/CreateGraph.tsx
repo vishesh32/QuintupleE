@@ -1,22 +1,24 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { getTick } from '@/app/actions';
-
-const sample = [
-    "Tick Cost (Cents)",
-    "Sun Intensity (%)",
-    "Demand (Watts)"
-]
+import { AllVars } from '@/helpers/graph_data'
 
 export default function CreateGraph({setPlotGraphModal} : any){
+    const [opt, setOpt] = useState<string | undefined>(undefined)
+
 
     const handleClose = ()=>{
         setPlotGraphModal(false);
     }
 
+    const handleSelectChange = ({target}: {target: any})=>{
+        console.log(target);
+    } 
+
     const handleCreatePlot = async (e: any)=>{
-        var data = await getTick()
-        handleClose()
+        console.log(e)
+        // var data = await getTick()
+        // handleClose()
     }
 
     return (
@@ -28,9 +30,9 @@ export default function CreateGraph({setPlotGraphModal} : any){
             </div>
             <h2 className='text-4xl font-bold'>Plot A Graph</h2>
             <div className='flex flex-col justify-center items-center w-full h-full'>
-                <select className='w-[250px] p-2.5 text-xl text-center rounded-xl shadow-md border-[#001E1D] border-[2px]' name="" id="" defaultValue="default">
+                <select className='w-[250px] p-2.5 text-xl text-center rounded-xl shadow-md border-[#001E1D] border-[2px]' name="" id="" defaultValue="default" onChange={handleSelectChange}>
                     <option value="default" disabled>Select a Variable</option>
-                    {sample.map((val)=><option key={val}>{val}</option>)}
+                    {AllVars.map((variable)=><option key={variable.name} value={variable.value}>{variable.name}</option>)}
                 </select>
                 <br />
                 <br />
