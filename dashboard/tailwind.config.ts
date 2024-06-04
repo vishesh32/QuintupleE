@@ -15,6 +15,21 @@ const config: Config = {
       },
       boxShadow: {
         "card": "0px 4px 12px 0px rgba(0, 0, 0, 0.25);",
+      },
+      keyframes: {
+        ttb: {
+          "from": {
+            transfrom: 'translateY(-100%)',
+            opacity: "0"
+          },
+          "to": {
+            transfrom: 'translateY(0)',
+            opacity: "1"
+          },
+        }
+      },
+      animation: {
+        ttb: "ttb 0.7s ease-in-out"
       }
     },
   },

@@ -1,33 +1,20 @@
 'use server'
+require('dotenv').config()
+import { MongoClient, Db } from 'mongodb'
 
-import { emptySimData, SimData } from "@/helpers/sim_data";
-
-// this is a server action
-// used as a proxy as external web server is missing the 'Access-Control-Allow-Origin' header
-async function getSimData() : Promise<SimData> {
-    // possible problem is ticks might be different
-    // if different -> request all again
-
-    try{
-        const [price, demand, sun, deferables] = await Promise.all([
-            (await fetch("https://icelec50015.azurewebsites.net/price")).json(), 
-            (await fetch("https://icelec50015.azurewebsites.net/demand")).json(), 
-            (await fetch("https://icelec50015.azurewebsites.net/sun")).json(),
-            (await fetch("https://icelec50015.azurewebsites.net/deferables")).json()
-        ]);
-
-        return {
-            day: price.day,
-            tick: price.tick,
-            buyPrice: price.buy_price,
-            sellPrice: price.sell_price,
-            demand: demand.demand,
-            sun: sun.sun,
-            deferables: deferables,
-        }
-    } catch {
-        return emptySimData;
-    }
+var client: MongoClient | undefined;
+var db: Db | undefined;
+const conn_string = process.env.MONGO_URL
+if(conn_string == undefined) throw new Error("Can't Find Database Connection String")
+else {
+    client = new MongoClient(conn_string);
+    db = client.db("smartgrid")
 }
 
-export { getSimData }
+async function getTick(){
+    var res = await db?.collection("ticks-live").find({}, { projection: {_id: 0, demand: 1, tick: 1, day: 1} }).toArray()
+    console.log(res)
+    return res;
+}
+
+export { getTick }

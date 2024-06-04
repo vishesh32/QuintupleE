@@ -1,5 +1,6 @@
 import React from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import { getTick } from '@/app/actions';
 
 const sample = [
     "Tick Cost (Cents)",
@@ -13,10 +14,15 @@ export default function CreateGraph({setPlotGraphModal} : any){
         setPlotGraphModal(false);
     }
 
+    const handleCreatePlot = async (e: any)=>{
+        var data = await getTick()
+        handleClose()
+    }
+
     return (
-        <div className='text-black bg-background flex flex-col text-center w-[50%] h-[40%] mt-[25%] rounded-2xl p-10'>
+        <div className='text-black bg-background flex flex-col text-center w-[50%] max-w-[800px] min-h-[500px] h-[40%] rounded-2xl p-10'>
             <div className='flex flex-row justify-end'>
-                <button onClick={handleClose}>
+                <button onClick={handleClose} className='hover:opacity-50 duration-[0.15s]'>
                     <XMarkIcon className='size-7'></XMarkIcon>
                 </button>
             </div>
@@ -28,7 +34,12 @@ export default function CreateGraph({setPlotGraphModal} : any){
                 </select>
                 <br />
                 <br />
-                <button className='bg-[#001E1D] text-white text-xl p-2.5 w-[130px] rounded-xl hover:mt-[-3px] hover:mb-[3px] duration-[0.2s]'>Plot</button>
+                <button 
+                className='bg-[#001E1D] text-white text-xl p-2.5 w-[130px] rounded-xl hover:opacity-75 duration-[0.25s]'
+                onClick={handleCreatePlot}
+                >
+                    Plot
+                </button>
             </div>
         </div>
     );
