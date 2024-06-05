@@ -1,3 +1,49 @@
+# This Python script implements a control algorithm for optimizing power output using an Incremental Conductance Algorithm
+# for Maximum Power Point Tracking (MPPT). It utilizes various hardware components including ADC pins for voltage
+# measurement, PWM for output control, and the INA219 sensor for current sensing.
+
+# Hardware Setup:
+# - Initializes ADC pins (va_pin, vb_pin, and vpot_pin) for reading analog voltage values.
+# - Sets up I2C communication with the INA219 current sensor.
+# - Configures PWM on a specific pin with defined frequency and duty cycle limits.
+# - Declares global variables to track timer status, execution count, first run flag, and shunt resistance for current measurements.
+
+# Utility Functions:
+# - saturate(signal, upper, lower): Ensures that a given signal stays within specified upper and lower bounds.
+# - tick(t): Timer callback function that sets a flag (timer_elapsed) to indicate the timer has elapsed.
+
+# INA219 Class:
+# - Defines methods to configure the INA219 sensor, read shunt voltage, and bus voltage.
+# - Initializes the sensor with specific configurations.
+
+# Adaptive Delay Function:
+# - Adjusts the delay dynamically based on the difference in power between iterations to optimize the control loop's responsiveness.
+
+# Main Control Loop:
+# - Runs indefinitely, performing the following tasks:
+#   - Initializes INA219 and sets up a periodic timer for the first run.
+#   - Reads voltage values from ADC pins and shunt voltage from INA219.
+#   - Calculates current and output power.
+#   - Uses the Incremental Conductance Algorithm to adjust the PWM duty cycle, ensuring the system operates at maximum power point by comparing incremental and instantaneous conductance.
+#   - Ensures the PWM duty cycle stays within predefined limits using the saturate function.
+#   - Dynamically adjusts the loop delay based on power change.
+#   - Outputs debug information periodically, providing insights into power output, conductance, and duty cycle.
+
+# This setup and algorithm ensure efficient power optimization, dynamically adapting to changing conditions and maximizing the power extracted from the system.
+
+# Incremental Conductance Algorithm:
+# - Calculate the change in current (delta_iL) and voltage (delta_va) from previous values.
+# - Compute the current output power.
+# - Compare the incremental conductance (delta_iL / delta_va) to the instantaneous conductance (-iL / va):
+#   - If incremental conductance equals instantaneous conductance, the system is at MPP, no change needed.
+#   - If incremental conductance is greater than instantaneous conductance, the system is to the left of MPP:
+#     - Increase voltage (decrease duty cycle).
+#   - If incremental conductance is less than instantaneous conductance, the system is to the right of MPP:
+#     - Decrease voltage (increase duty cycle).
+# - Ensure the duty cycle stays within defined bounds.
+# - Update previous current and voltage values for the next iteration.
+
+
 from machine import Pin, I2C, ADC, PWM, Timer
 import utime
 
