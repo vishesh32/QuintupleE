@@ -66,7 +66,7 @@ def run_validation(start, number_of_days, policy_network, naive_params):
                     ticks,
                     max_alloc_total=MAX_ALLOCATION_TOTAL,
                     price_threshold=11,
-                    export_threshold=146,
+                    # export_threshold=146,
                 )
             )
         )
