@@ -4,4 +4,4 @@
 
 python server/test.py
 # python3 pico/simulation/pico.py
-# python3 server/main.py
+# python server/main.py
