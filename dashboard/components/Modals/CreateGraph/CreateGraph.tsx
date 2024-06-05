@@ -3,7 +3,7 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 import { getTick } from '@/app/actions';
 import { AllVars } from '@/helpers/graph_data'
 
-export default function CreateGraph({setPlotGraphModal} : any){
+export default function CreateGraph({setPlotGraphModal, addGraph} : any){
     const [opt, setOpt] = useState<string | undefined>(undefined)
 
 
@@ -12,13 +12,17 @@ export default function CreateGraph({setPlotGraphModal} : any){
     }
 
     const handleSelectChange = ({target}: {target: any})=>{
-        console.log(target);
+        setOpt(target.value)
     } 
 
     const handleCreatePlot = async (e: any)=>{
-        console.log(e)
-        // var data = await getTick()
-        // handleClose()
+        if(opt != undefined){
+            var data = await getTick(opt)
+            addGraph(data)
+            handleClose()
+        } else{
+            console.error("Data returned from database is empty.")
+        }
     }
 
     return (

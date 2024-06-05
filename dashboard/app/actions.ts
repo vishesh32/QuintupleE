@@ -13,7 +13,7 @@ else {
 
 async function getTick(prop: string){
     var res = await db?.collection("ticks-live").find({}, { projection: {_id: 0, [prop]: 1, tick: 1, day: 1} }).toArray()
-    console.log(res)
+    // console.log(res)
     return res;
 }
 
