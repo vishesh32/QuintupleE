@@ -1,34 +1,46 @@
 from machine import Pin, I2C, ADC, PWM, Timer
-import utime
+import time, utime
 
 # Set up some pin allocations for the Analogues and switches
 va_pin = ADC(Pin(28))
 vb_pin = ADC(Pin(26))
-vpot_pin = ADC(Pin(27))
-OL_CL_pin = Pin(12, Pin.IN, Pin.PULL_UP)
-BU_BO_pin = Pin(2, Pin.IN, Pin.PULL_UP)
-
-# Set up the I2C for the INA219 chip for current sensing
 ina_i2c = I2C(0, scl=Pin(1), sda=Pin(0), freq=2400000)
 
 # Some PWM settings, pin number, frequency, duty cycle limits and start with the PWM outputting the default of the min value.
-pwm = PWM(Pin(9))
-pwm.freq(100000)
 min_pwm = 9000
 max_pwm = 42500
+pwm = PWM(Pin(9))
+pwm.freq(100000)
 pwm_out = min_pwm
-pwm_ref = 30000
+
 
 # Basic signals to control logic flow
 global timer_elapsed
 timer_elapsed = 0
+count = 0
 first_run = 1
 
 # Need to know the shunt resistance to calculate the current
 global SHUNT_OHMS
 SHUNT_OHMS = 0.10
-global CAPACITANCE
-CAPACITANCE = 0.25  # Example value, set this to the actual capacitance
+
+
+# Initialize variables for energy tracking
+energy_stored = 6.4  # Initial energy stored
+energy_max = 31.4  # Maximum energy
+energy_min = 0  # Minimum energy
+energy_target = 25  # Target energy
+energy_change_per_tick = 2.5  # Energy change per tick (5 seconds)
+ticks_to_release = 10  # Total ticks to release energy
+tick_duration = 5000  # Tick duration in milliseconds
+
+# Initialize PID controller parameters
+kp = 0.1  # Proportional gain
+ki = 0.01  # Integral gain
+kd = 0  # Derivative gain
+prev_error = 0
+integral = 0
+
 
 # saturation function for anything you want saturated within bounds
 def saturate(signal, upper, lower): 
@@ -43,8 +55,26 @@ def tick(t):
     global timer_elapsed
     timer_elapsed = 1
 
+# Define functions
+def change_energy():
+    global energy_stored
+    global energy_max
+    global energy_min
+    
+    while True:
+        try:
+            energy_change = float(input("Enter energy change (+ for charge, - for discharge): "))
+            if energy_change > 0:
+                energy_stored = min(energy_stored + energy_change, energy_max)
+            else:
+                energy_stored = max(energy_stored + energy_change, energy_min)
+            break
+        except ValueError:
+            print("Invalid input. Please enter a valid number.")
+
 # These functions relate to the configuring of and reading data from the INA219 Current sensor
 class ina219: 
+    
     # Register Locations
     REG_CONFIG = 0x00
     REG_SHUNTVOLTAGE = 0x01
@@ -82,125 +112,84 @@ class ina219:
         ina_i2c.writeto_mem(conf.address, conf.REG_CALIBRATION, b'\x00\x00')
 
 
-# Function to calculate current energy based on duty cycle
-def duty_to_energy(duty):
-    return round((-8e-18 * duty**4 + 1e-12 * duty**3 - 4e-8 * duty**2 + 0.0008 * duty + 1.8256) * 10) / 10
-
-# Function to calculate duty cycle based on energy
-def energy_to_duty(energy):
-    return int((energy * 10)**0.25)
-
-# Calculate step duration based on target energy (2.5 Joules per tick)
-def calculate_step_duration(target_energy):
-    return int(1000 * target_energy / 2.5)  # Convert energy to ticks (1 tick = 1 ms)
-
-
-### Ensures that the capacitor starts with min voltage/energy
+# Set duty cycle to min_pwm
 pwm_out = min_pwm
-current_energy = duty_to_energy(pwm_out)
-duty = int(pwm_out)
-pwm.duty_u16(duty)
+pwm_out = saturate(pwm_out, max_pwm, min_pwm)
+pwm.duty_u16(int(pwm_out))
 
-# Add delay for stabilising voltage
-utime.sleep_ms(4500)
+# Wait for 5 seconds
+utime.sleep_ms(5000)
 
-# Here we go, main function, always executes
-while True:
-    if first_run:
-        # for first run, set up the INA link and the loop timer settings
-        ina = ina219(SHUNT_OHMS, 64, 5)
-        ina.configure()
-        first_run = 0
-        
-        # This starts a 1kHz timer which we use to control the execution of the control loops and sampling
-        loop_timer = Timer(mode=Timer.PERIODIC, freq=1000, callback=tick)
+# Open a file in write mode and write the header row
+with open('Capacitor_Data.csv', 'w') as f:
+    f.write('Va,Vb,iL,Po,Duty,Time(ms)\n')
     
-    # If the timer has elapsed it will execute some functions, otherwise it skips everything and repeats until the timer elapses
-    if timer_elapsed == 1:  # This is executed at 1kHz
-        va = 1.017 * (12490 / 2490) * 3.3 * (va_pin.read_u16() / 65536)  # calibration factor * potential divider ratio * ref voltage * digital reading
-        vb = 1.015 * (12490 / 2490) * 3.3 * (vb_pin.read_u16() / 65536)  # calibration factor * potential divider ratio * ref voltage * digital reading
+    start_time = utime.ticks_ms()
+
+    while True:
+        va = 1.017*(12490/2490)*3.3*(va_pin.read_u16()/65536) # calibration factor * potential divider ratio * ref voltage * digital reading
+        vb = 1.015*(12490/2490)*3.3*(vb_pin.read_u16()/65536) # calibration factor * potential divider ratio * ref voltage * digital reading
+        Vshunt = ina219.vshunt()
+        iL = -(Vshunt/SHUNT_OHMS) # Invert the current sense for Boost
+
+        # Ask user for energy change
+        change_energy()
         
-        Vshunt = ina.vshunt()
+        # PID controller for duty cycle
+        error = energy_target - energy_stored
+        integral += error
+        derivative = error - prev_error
+        pid_output = kp * error + ki * integral + kd * derivative
+        pid_output = saturate(pid_output, 3500, -3500)  # Limit maximum change to prevent spikes
         
-        # Boost uses different limits on the PWM (why?) and inverts the current (also why?)
-        min_pwm = 9000
-        max_pwm = 42500  # limit the duty in boost mode to prevent high voltages
-        iL = -(Vshunt / SHUNT_OHMS)  # Invert the current sense for Boost
-        
-        # Saturate the pwm and send it out (not inverted because boost)    
+        # Update duty cycle
+        pwm_out += pid_output
         pwm_out = saturate(pwm_out, max_pwm, min_pwm)
         duty = int(pwm_out)
         pwm.duty_u16(duty)
-    timer_elapsed = 0
+        
+        # Record current time and calculate elapsed time
+        current_time = utime.ticks_ms()
+        elapsed_time = utime.ticks_diff(current_time, start_time) // 1000
+        
+        # Calculate output power (Va * iL)
+        output_power = va * iL  
 
-    # Prompt the user for input and adjust duty cycle to achieve the desired change in energy
-    delta_energy = float(input("Enter the change in energy: "))  # Prompt user for input
+        # Update energy stored
+        energy_stored += energy_change_per_tick
+        energy_stored = max(energy_min, min(energy_stored, energy_max))
+        
+        # Print and record data
+        print("Va = {:.3f} V".format(va))
+        print("Vb = {:.3f} V".format(vb))
+        print("iL = {:.3f} A".format(iL))
+        print("Po = {:.3f} W".format(output_power))
+        print("Duty = {:d}".format(duty))
+        print("Time = {:d}".format(elapsed_time))
+        print("Energy = {:.2f} J".format(energy_stored))
+        print(" ")
+        f.write(f'{va:.3f},{vb:.3f},{iL:.3f},{output_power:.3f},{duty},{elapsed_time},{energy_stored:.2f}\n')
+        
 
-    # Calculate new energy based on current energy and delta
-    new_energy = current_energy + delta_energy
-    
-    # Limit the new energy to the maximum and minimum energy thresholds
-    new_energy = min(new_energy, 31.4)  # Maximum energy threshold
-    new_energy = max(new_energy, 6.4)   # Minimum energy threshold
-
-
-    # Calculate new duty cycle based on new energy
-    new_duty = energy_to_duty(new_energy)
-
-    # Calculate step size
-    total_steps = 100  # Total number of steps to reach the new duty cycle
-    step_duration = 450  # Time duration (ms) for each step
-    current_duty = pwm_out
-    duty_difference = new_duty - current_duty
-    max_step_size = 4000  # Maximum allowed step size
-
-    # Calculate step size, ensuring a minimum increment of 1 and a maximum of 3000
-    # Calculate step size based on the difference between current and target duty cycles
-    step_size = max(1, min(max_step_size, abs(new_duty - current_duty) // total_steps))
-
-
-    # Adjust duty cycle and track changes until current energy is close to the desired energy
-    while True:
-        # Increment or decrement the current duty by the step size
-        if new_duty > current_duty:
-            current_duty += step_size
-            if current_duty > new_duty:
-                current_duty = new_duty
-        else:
-            current_duty -= step_size
-            if current_duty < new_duty:
-                current_duty = new_duty
-
-        # Saturate the duty cycle and set it
-        pwm_out = saturate(current_duty, max_pwm, min_pwm)
-        duty = int(pwm_out)
-        pwm.duty_u16(duty)
-
-        # Read values and calculate current energy
-        va = 1.017 * (12490 / 2490) * 3.3 * (va_pin.read_u16() / 65536)
-        vb = 1.015 * (12490 / 2490) * 3.3 * (vb_pin.read_u16() / 65536)
-        Vshunt = ina.vshunt()
-        iL = -(Vshunt / SHUNT_OHMS)
-        current_energy = 0.5 * CAPACITANCE * va**2
-
-        # Print real-time values
-        print(f"Va = {va:.1f} V, iL = {iL:.1f} A, Duty = {duty}, New Energy = {new_energy:.1f},Current Energy = {current_energy:.1f} J")
-
-        # Check if current energy is nearly equal to the desired new energy
-        if abs(current_energy - new_energy) < 0.1:  # Adjust tolerance as needed
-            break
-
-        # Sleep for the duration of each step
-        utime.sleep_ms(step_duration)
-
-    # Ensure the final duty cycle matches the desired duty cycle
-    pwm_out = new_duty
-    duty = int(pwm_out)
-    pwm.duty_u16(duty)
-
-    # Update current energy
-    current_energy = duty_to_energy(pwm_out)
-    
-    print("\nEnergy Change Complete!\n")
+        # Check if energy change exceeds limits
+        if energy_stored < 6.4:
+            print("Warning: Energy cannot go below 6.4J.")
+            energy_stored = 6.4
+        elif energy_stored > 25:
+            print("Warning: Energy cannot exceed 25J.")
+            energy_stored = 25
 
 
+        # Check if it's time to release energy
+        if elapsed_time % tick_duration == 0 and elapsed_time != 0:
+            # Calculate the energy to be released in this tick
+            energy_to_release = min(energy_change_per_tick, energy_stored)
+            
+            # Update the energy stored
+            energy_stored -= energy_to_release
+            
+            # Ensure energy remains within bounds
+            energy_stored = max(energy_min, min(energy_stored, energy_max))
+
+        # Sleep before next iteration
+        utime.sleep_ms(100)
