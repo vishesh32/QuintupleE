@@ -43,7 +43,9 @@ costs_per_day = []
 
 RUN_BROKER = True
 RUN_ALGO = False
-DB_LOG = True
+DB_LOG = False
+
+setpoint = 0.3
 
 
 def get_day_and_tick():
@@ -99,7 +101,7 @@ while True:
 
     # TESTING ONLY
     # TODO: Remove this after testing
-    algo_sim = gen_algo_data(day.day, tick.tick)
+    # algo_sim = gen_algo_data(day.day, tick.tick)
 
     # part that runs the start of every new tick
     if RUN_ALGO:
@@ -134,13 +136,14 @@ while True:
             print("-" * 20)
             print()
 
-    # if RUN_BROKER:
-    #     # send data to correct circuit component here
-    #     mqtt_client.send_sun_data(tick.sun)
-    #     mqtt_client.send_storage_smps(algo_sim.energy_store)
-    #     mqtt_client.send_ext_grid_smps(algo_sim.energy_import)
-    #     print("Published to broker")
-    #     print(list(mqtt_client.db_data.values()))
+    if RUN_BROKER:
+        # send data to correct circuit component here
+        # mqtt_client.send_sun_data(tick.sun)
+        # mqtt_client.send_storage_smps(algo_sim.energy_store)
+        # mqtt_client.send_ext_grid_smps(algo_sim.energy_import)
+        mqtt_client.send_load(1, setpoint)
+        print("Published to broker")
+        print(list(mqtt_client.db_data.values()))
 
     comp_vals = list(mqtt_client.db_data.values())
 

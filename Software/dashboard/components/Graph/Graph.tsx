@@ -4,7 +4,7 @@ import { Line, LineChart, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
 
 export default function Graph({data}: {data: GraphData}){
     return (
-        <LineChart width={1000} height={450} data={data.data.slice(0, 20)}>
+        <LineChart width={800} height={450} data={data.data.slice(0, 20)}>
             <XAxis dataKey={data.xValue}  />
             <YAxis></YAxis>
             <CartesianGrid stroke="#ccc" />
