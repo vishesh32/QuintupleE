@@ -18,7 +18,7 @@ export default function CreateGraph({setPlotGraphModal, addGraph} : any){
     const handleCreatePlot = async (e: any)=>{
         if(opt != undefined){
             var data = await getTick(opt)
-            addGraph(data)
+            addGraph(data, opt)
             handleClose()
         } else{
             console.error("Data returned from database is empty.")

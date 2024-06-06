@@ -1,10 +1,15 @@
+import { GraphData } from "@/helpers/graph_data";
 import React from "react";
-import { Line, LineChart } from 'recharts'
+import { Line, LineChart, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
 
-export default function Graph({data}: any){
+export default function Graph({data}: {data: GraphData}){
     return (
-        <LineChart width={500} height={300} data={data}>
-            <Line type='monotone' dataKey={0} stroke='#000000'></Line>
+        <LineChart width={1000} height={450} data={data.data.slice(0, 20)}>
+            <XAxis dataKey={data.xValue}  />
+            <YAxis></YAxis>
+            <CartesianGrid stroke="#ccc" />
+            <Line type='monotone' dataKey={data.yValue} stroke='#000000'></Line>
+            <Tooltip></Tooltip>
         </LineChart>
     )
 }

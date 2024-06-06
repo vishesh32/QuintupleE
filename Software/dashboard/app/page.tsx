@@ -5,24 +5,29 @@ import Card from '../components/Card/Card';
 import CreateGraph from '../components/Modals/CreateGraph/CreateGraph';
 import Graph from '@/components/Graph/Graph'
 import { getTick } from './actions';
-
-const precision = 3;
+import { GraphData } from '@/helpers/graph_data';
 
 export default function Home() {
   const [plotGraphModal, setPlotGraphModal] = useState<boolean>(false);
-  const [graphData, setGraphData] = useState<any[]>([]);
+  const [graphData, setGraphData] = useState<GraphData[]>([]);
 
   const handleAddPlot = ()=>setPlotGraphModal(true);
 
-  const addGraphData = (data: any)=>{
+  const addGraphData = (data: any, opt: string)=>{
     if(data != null && data != undefined){
-      setGraphData((prev)=>[...prev,data]);
+      var gData: GraphData = {
+        xValue: "tick",
+        yValue: opt,
+        data: data,
+      }
+      console.log(gData)
+      setGraphData((prev)=>[...prev, gData]);
     }
   };
 
   useEffect(()=>{
-    var data = getTick("buy_price");
-    addGraphData(data);
+    var opt = "buy_price";
+    getTick(opt).then((data)=>addGraphData(data, opt))
   }, [])
 
   return (
@@ -41,7 +46,7 @@ export default function Home() {
           </Card>
         ))}
 
-        <Card className="hover:mt-3 duration-150">
+        <Card className="hover:mt-4 duration-150">
           <button className='w-full h-full' onClick={handleAddPlot}>
             <p className='text-[#001E1D] text-opacity-80 text-[100px]'>+</p>
           </button>
