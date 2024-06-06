@@ -12,7 +12,7 @@ export default function Graph({data}: {data: GraphData}){
             data={data.data}
             onMouseDown={(e: any)=>{setLeftZoom(e.activeLabel); console.log(e.activeLabel)}}
             onMouseMove={(e: any)=>setRightZoom(e.activeLabel)}
-            // onMouseUp={}
+            onMouseUp={(e: any)=>setRightZoom(e.activeLabel)}
             >
                 <XAxis dataKey={data.xValue}  />
                 <YAxis></YAxis>
