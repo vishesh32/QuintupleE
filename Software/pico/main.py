@@ -1,31 +1,28 @@
-import network
 import machine
-from time import sleep
-import network
-import ssl
 import ubinascii
 from wifi import init
 import json
 
-SUN_TOPIC = "snd/sun"
+TOPIC = "snd"
 
 MQTT_CLIENT_ID = ubinascii.hexlify(machine.unique_id())
 MQTT_BROKER = "0.tcp.eu.ngrok.io"
 MQTT_BROKER_PORT = 19663
 
-sun = -1
+irradiance = -1
 
-
+# data format example for irradiance:
+# { name: "irradiance", payload: 10 }
 def on_mqtt_msg(topic, msg):
     topic_str = topic.decode()
     msg_str = msg.decode()
 
     print(f"topic: {topic_str} | msg_str: {msg_str}")
 
-    if topic_str == SUN_TOPIC:
-        data = json.loads(msg_str)
-        sun = data["sun"]
-        print(f"sun: {sun}")
+    data = json.loads(msg_str)
+    if data["name"] == "irradiance":
+        irradiance = data["payload"]
+        print(f"irradiance: {irradiance}")
 
 
 def mqtt_init():
@@ -54,10 +51,10 @@ def main():
     init()
     client = mqtt_init()
 
-    client.subscribe(SUN_TOPIC)
+    client.subscribe(TOPIC)
 
-    print(f"Waiting for messages on {SUN_TOPIC}")
-    client.publish(SUN_TOPIC, "Hello from Pico")
+    print(f"Waiting for messages on {TOPIC}")
+    client.publish(TOPIC, "Hello from Pico")
     while True:
         client.check_msg()
 
