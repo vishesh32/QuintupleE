@@ -76,7 +76,6 @@ class ina219:
         ina_i2c.writeto_mem(self.address, self.REG_CALIBRATION, b'\x00\x00')
 
 
-
 # Modify the step size dynamically based on the power difference
 def adaptive_step_size(prev_power, output_power, step):
     power_diff = abs(output_power - prev_power)
@@ -85,7 +84,6 @@ def adaptive_step_size(prev_power, output_power, step):
     else:
         step = min(step * 2, 1000)  # increase step size, with a maximum of 1000
     return step
-
 
 
 # Variables for MPPT
