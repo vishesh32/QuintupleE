@@ -52,12 +52,13 @@ class MClient:
     def send_storage_smps(self, energy):
         self.client.publish(SND + STORAGE_TOPIC, json.dumps({"energy": energy}), 0)
 
-    def send_load(self, load_num, energy):
+    # transmit actual voltage div by 10
+    def send_load(self, load_num, setpoint):
         if not (load_num >= 1 and load_num <= 4):
             raise Exception("Invalid value for load_num, when sending data to the load")
 
         self.client.publish(
-            SND + LOAD_TOPICS[load_num - 1], json.dumps({"energy": energy}), 0
+            SND + LOAD_TOPICS[load_num - 1], json.dumps({"setpoint": setpoint}), 2
         )
 
     def end(self):

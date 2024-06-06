@@ -2,8 +2,8 @@ import network
 from time import sleep
 
 
-ssid = ''
-password = ''
+ssid = 'DESKTOP-KLGKDPF 1457'
+password = '371Mu9(0'
 
 def init():
     #Connect to WLAN

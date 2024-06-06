@@ -22,4 +22,11 @@ const AllVars : Variables[] = [
     }
 ];
 
+interface GraphData {
+    xValue: string,
+    yValue: string,
+    data: any
+}
+
 export { AllVars }
+export type { GraphData }
