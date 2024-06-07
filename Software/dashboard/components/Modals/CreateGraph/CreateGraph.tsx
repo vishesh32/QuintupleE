@@ -26,7 +26,7 @@ export default function CreateGraph({setPlotGraphModal, addGraph} : any){
     }
 
     return (
-        <div className='text-black bg-background flex flex-col text-center w-[50%] max-w-[800px] min-h-[500px] h-[40%] rounded-2xl p-10'>
+        <div className='text-black bg-background flex flex-col text-center w-[50%] max-w-[800px] min-h-[500px] h-[40%] rounded-2xl p-10 animate-ttb duration-100'>
             <div className='flex flex-row justify-end'>
                 <button onClick={handleClose} className='hover:opacity-50 duration-[0.15s]'>
                     <XMarkIcon className='size-7'></XMarkIcon>

@@ -1,3 +1,4 @@
+import Graph from '../components/Graph/Graph';
 interface Variables {
     name: string,
     value: string
@@ -22,11 +23,34 @@ const AllVars : Variables[] = [
     }
 ];
 
-interface GraphData {
-    xValue: string,
-    yValue: string,
-    data: any
+// interface GraphData {
+//     id: number,
+//     xValue: string,
+//     yValue: string,
+//     data: any
+// }
+
+class GraphData {
+    id: number;
+    xValue: string;
+    yValue: string;
+    data: any;
+
+    constructor(id: number, xValue: string, yValue: string, data: any) {
+        this.id = id;
+        this.xValue = xValue;
+        this.yValue = yValue;
+        this.data = data;
+    }
+
+    getXLabel() {
+        return this.xValue.split("_").map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+        return this.xValue;
+    }
+    getYLabel() {
+        return this.yValue.split("_").map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+    }
 }
 
 export { AllVars }
-export type { GraphData }
+export { GraphData }

@@ -30,7 +30,7 @@ const config: Config = {
       },
       animation: {
         ttb: "ttb 0.7s ease-in-out"
-      }
+      },
     },
   },
   plugins: [],
