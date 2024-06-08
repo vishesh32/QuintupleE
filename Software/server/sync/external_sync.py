@@ -4,7 +4,7 @@ import requests
 
 DAY_LEN = 300
 TICK_LEN = 5
-POLLS_PER_TICK = 5
+POLLS_PER_TICK = 4
 
 def getExternalTick():
     try:
@@ -13,35 +13,45 @@ def getExternalTick():
         raise Exception("Failed to get external tick")
 
 def syncWithExternal():
+
+    # constant polling to sync with external server
     eTick = getExternalTick()
 
-    curTick = eTick
+    prevTick = eTick
     nextDelay = 0
 
-    while curTick == eTick:
-        curTick = getExternalTick()
-        # print(f"curTick: {curTick}, eTick: {eTick}")
-
-    prevTick = curTick
+    while prevTick == eTick:
+        eTick = getExternalTick()
+        print(f"curTick: {prevTick}, eTick: {eTick}")
+    
+    prevTick = eTick
 
     while True:
-        time.sleep(TICK_LEN/POLLS_PER_TICK - nextDelay)
+        print(f"starting with: {prevTick}")
+        time.sleep(4.5 - nextDelay)
+
+        # constant polling to find change in tick
+        while prevTick == eTick:
+            eTick = getExternalTick()
+            print(f"curTick: {prevTick}, eTick: {eTick}")
 
         start = time.time()
 
         # main goes here
-        eTick = getExternalTick()
         if(eTick != prevTick):
             t = time.time()
             print(f"prevTick: {prevTick}, eTick: {eTick}")
             prevTick = eTick
             with open("polling.csv", "a") as file:
                 file.write(f"{t},{eTick}\n")
+        prevTick = eTick
 
         end = time.time()
         nextDelay = end - start if end - start < TICK_LEN/POLLS_PER_TICK else 0
 
-        print(f"timeout: {TICK_LEN/POLLS_PER_TICK - nextDelay}, fetch time: {end - start}")
+        # print(f"new tick: {prevTick}, eTick: {eTick}")
+
+        # print(f"timeout: {TICK_LEN/POLLS_PER_TICK - nextDelay}, fetch time: {end - start}")
 
 
 
