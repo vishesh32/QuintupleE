@@ -33,10 +33,10 @@ export default function History() {
     });
   };
 
-  useEffect(() => {
-    var opt = "buy_price";
-    getTick(opt).then((data) => addGraphData(data, opt));
-  }, []);
+  // useEffect(() => {
+  //   var opt = "buy_price";
+  //   getTick(opt).then((data) => addGraphData(data, opt));
+  // }, []);
 
   return (
     <div>
@@ -55,6 +55,7 @@ export default function History() {
                 handleRemoveGraph={null}
                 graphFullScreen={graphFullScreen}
                 setGraphFullScreen={setGraphFullScreen}
+                animation={true}
               />
             </Card>
           )}
@@ -68,11 +69,12 @@ export default function History() {
               graphFullScreen={graphFullScreen}
               data={data}
               setGraphFullScreen={setGraphFullScreen}
+              animation={true}
             ></Graph>
           </Card>
         ))}
 
-        <Card className="hover:opacity-65 duration-150">
+        <Card className="hover:brightness-[95%] duration-150">
           <button className="w-full h-full" onClick={handleAddPlot}>
             <p className="text-[#001E1D] text-opacity-80 text-[100px]">+</p>
           </button>

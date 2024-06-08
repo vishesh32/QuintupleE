@@ -11,7 +11,7 @@ export default function CreateGraph({setPlotGraphModal, addGraph} : any){
         setPlotGraphModal(false);
     }
 
-    const handleSelectChange = ({target}: {target: any})=>{
+    const handleMainChange = ({target}: {target: any})=>{
         setOpt(target.value)
     } 
 
@@ -26,7 +26,7 @@ export default function CreateGraph({setPlotGraphModal, addGraph} : any){
     }
 
     return (
-        <div className='text-black bg-background flex flex-col text-center w-[50%] max-w-[800px] min-h-[500px] h-[40%] rounded-2xl p-10 animate-ttb duration-100'>
+        <div className='text-black bg-background flex flex-col text-center w-[50%] max-w-[800px] min-h-[500px] h-[40%] rounded-2xl p-10 animate-ttb-fast'>
             <div className='flex flex-row justify-end'>
                 <button onClick={handleClose} className='hover:opacity-50 duration-[0.15s]'>
                     <XMarkIcon className='size-7'></XMarkIcon>
@@ -34,10 +34,20 @@ export default function CreateGraph({setPlotGraphModal, addGraph} : any){
             </div>
             <h2 className='text-4xl font-bold'>Plot A Graph</h2>
             <div className='flex flex-col justify-center items-center w-full h-full'>
-                <select className='w-[250px] p-2.5 text-xl text-center rounded-xl shadow-md border-[#001E1D] border-[2px]' name="" id="" defaultValue="default" onChange={handleSelectChange}>
+                {/* Main Variable Select */}
+                <select className='w-[300px] p-2.5 text-xl text-center rounded-xl shadow-md border-[#001E1D] border-[2px] outline-none' name="" id="" defaultValue="default" onChange={handleMainChange}>
                     <option value="default" disabled>Select a Variable</option>
                     {AllVars.map((variable)=><option key={variable.name} value={variable.value}>{variable.name}</option>)}
                 </select>
+                <br />
+                <br />
+                {/* Secondary Variable Select */}
+                {opt !== undefined &&
+                <select className='w-[300px] p-2.5 text-xl text-center rounded-xl shadow-md border-[#001E1D] border-[2px] outline-none animate-ttb-fast' name="" id="" defaultValue="default" onChange={handleMainChange}>
+                    <option value="default">(Optional) Second Variable</option>
+                    {AllVars.map((variable)=><option key={variable.name} value={variable.value}>{variable.name}</option>)}
+                </select>}
+
                 <br />
                 <br />
                 <button 

@@ -44,13 +44,15 @@ class GraphData {
     }
 
     getXLabel() {
-        return this.xValue.split("_").map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
-        return this.xValue;
+        return FormatString(this.xValue);
     }
     getYLabel() {
-        return this.yValue.split("_").map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+        return FormatString(this.yValue);
     }
 }
 
-export { AllVars }
-export { GraphData }
+function FormatString(s: string){
+    return s.split("_").map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+}
+
+export { AllVars, GraphData, FormatString };

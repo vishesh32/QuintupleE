@@ -18,11 +18,12 @@ class SMPS(BaseModel):
 	power_out: int
 
 class MClient():
-    def __init__(self, smps_type, broker_addr="localhost", broker_port=1883, keepalive=120):
-        self.client = paho.Client(paho.CallbackAPIVersion.VERSION2)
+    def __init__(self, smps_type, broker_addr="localhost", broker_port=9001, keepalive=120):
+        self.client = paho.Client(paho.CallbackAPIVersion.VERSION2, transport="websockets")
         self.client.on_connect = self.handle_connect
         self.client.on_message = handle_msg
         self.type = smps_type
+        self.tick = 0
 
         # client.username_pw_set(username="quintuplee", password="solar1")
 
@@ -32,7 +33,8 @@ class MClient():
             self.client.loop_start()
         
     def send_sun_data(self, smps: SMPS):
-        self.client.publish(RCV+SUN_TOPIC, json.dumps(smps.model_dump()), 0)
+        self.client.publish(RCV+SUN_TOPIC, json.dumps({**smps.model_dump(), "tick": self.tick}), 0)
+        self.tick += 1
 
     def send_ext_grid_smps(self, smps: SMPS):
         self.client.publish(RCV+EXT_GRID_TOPIC, json.dumps(smps.model_dump()), 0)
