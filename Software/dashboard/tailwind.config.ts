@@ -26,10 +26,11 @@ const config: Config = {
             transfrom: 'translateY(0)',
             opacity: "1"
           },
-        }
+        },
       },
       animation: {
-        ttb: "ttb 0.7s ease-in-out"
+        "ttb": "ttb 0.7s ease-in-out",
+        "ttb-fast": "ttb 0.25s ease-in-out"
       },
     },
   },

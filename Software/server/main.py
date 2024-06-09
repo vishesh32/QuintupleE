@@ -22,7 +22,7 @@ mqtt_client: MClient | None = None
 # tick = -1
 
 # SUN_TOPIC = "external/sun"
-HTTP_PERIOD = 1
+WAIT = 4.5
 
 
 filename = "server/optimisation/checkpoints/pn_epochs1500_trajruns_10_ema100.pth"
@@ -90,11 +90,20 @@ if DB_LOG:
 if RUN_BROKER:
     mqtt_client = MClient()
 
-while True:
+# sync with external server
+_, tick = get_day_and_tick()
+prevTick = tick.tick
+
+while prevTick == tick.tick:
     day, tick = get_day_and_tick()
 
-    if prev_tick and prev_tick.tick == tick.tick and prev_tick.day == tick.day:
-        continue
+while True:
+    # this is the start of the next tick
+    start = time.time()
+    print("Start of tick")
+
+    # if prev_tick and prev_tick.tick == tick.tick and prev_tick.day == tick.day:
+    #     continue
 
     if prev_tick and prev_tick.tick == 59:
         env["deferables"] = day.deferables
@@ -168,7 +177,13 @@ while True:
         print("Written to db")
 
     prev_tick = tick
-    sleep(HTTP_PERIOD)
+
+    delay = time.time() - start
+    prevTick = tick.tick
+
+    sleep(WAIT - delay)
+    while prevTick == tick.tick:
+        day, tick = get_day_and_tick()
 
 
 # except Exception as e:
