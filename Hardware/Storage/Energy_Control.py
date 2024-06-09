@@ -9,16 +9,16 @@ ina_i2c = I2C(0, scl=Pin(1), sda=Pin(0), freq=2400000)
 pwm = PWM(Pin(9))
 pwm.freq(100000)
 min_pwm = 9000
-max_pwm = 64536
+max_pwm = 43500
 pwm_out = min_pwm
 
 C = 0.25  # Capacitance in Farads
 SHUNT_OHMS = 0.10
 
 # PID Gains for different energy levels
-low_energy_gains = {'kp': 15, 'ki': 5, 'kd': 20}
+low_energy_gains = {'kp': 10, 'ki': 10, 'kd': 10}
 mid_energy_gains = {'kp': 20, 'ki': 10, 'kd': 20}
-high_energy_gains = {'kp': 40, 'ki': 15, 'kd': 10}
+high_energy_gains = {'kp': 25, 'ki': 15, 'kd': 20}
 
 # Control variables
 v_err_int = 0
@@ -99,7 +99,7 @@ pwm.duty_u16(duty)
 wait_for_stability()
 
 # Get initial desired energy
-E_desired = get_desired_energy()
+E_desired = 6.4
 
 # Initialize the start time
 start_time = utime.ticks_ms()
@@ -117,7 +117,7 @@ while True:
     E_stored = round(0.5 * C * va**2 , 1)
     
     # Select PID gains and pwm_out calculation based on energy levels
-    if 4 <= E_stored <= 20:
+    if 0 <= E_stored <= 20:
         kp_v = low_energy_gains['kp']
         ki_v = low_energy_gains['ki']
         kd_v = low_energy_gains['kd']
@@ -146,12 +146,11 @@ while True:
             
             # Check for new desired energy input
             new_E_desired = get_desired_energy()
-            
-            # Ignore new input if it's within tolerance of the current or previous input
-            if abs(new_E_desired - E_stored) < tolerance or (previous_input is not None and abs(new_E_desired - previous_input) < tolerance):
-                print("New desired energy is too close to current or previous value. Ignoring input.")
-                continue
-            
+                        # Ignore new input if it's too close to the current or previous input
+            while abs(new_E_desired - E_stored) < tolerance or (previous_input is not None and abs(new_E_desired - previous_input) < tolerance):
+                print("New desired energy is too close to the current or previous value. \nPlease enter a different value.")
+                new_E_desired = get_desired_energy()
+
             E_desired = new_E_desired
             previous_input = E_desired  # Update previous input
             start_time = utime.ticks_ms()  # Reset the start time
@@ -178,7 +177,7 @@ while True:
 
         # Calculate adaptive step size
         energy_diff = abs(E_stored - E_desired)
-        adaptive_step = max(1000, min(2000, int(energy_diff * 1000)))
+        adaptive_step = max(100, min(1000, int(energy_diff * 1000)))
 
         # Adjust PWM duty based on stability and energy difference
         if not wait_for_stability():
