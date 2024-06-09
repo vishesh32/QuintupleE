@@ -1,8 +1,8 @@
 enum Collection {
     algo = "algo-decisions",
     comp_states = "component-states",
-    days = "days-live",
-    ticks = "ticks-live",
+    days = "days",
+    ticks = "ticks",
 }
 
 interface Variable {
