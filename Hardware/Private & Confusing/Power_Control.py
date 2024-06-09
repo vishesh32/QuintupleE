@@ -1,123 +1,101 @@
 from machine import Pin, I2C, ADC, PWM, Timer
 import time, utime
 
-# Initialization
-va_pin = ADC(Pin(28))
-vb_pin = ADC(Pin(26))
-ina_i2c = I2C(0, scl=Pin(1), sda=Pin(0), freq=2400000)
-
-pwm = PWM(Pin(9))
-pwm.freq(100000)
-min_pwm = 9000
-max_pwm = 42300
-pwm_out = min_pwm
-
-C = 0.25  # Capacitance in Farads
+# Constants
+MIN_PWM = 9000
+MAX_PWM = 42300
 SHUNT_OHMS = 0.10
+MAX_CAPACITY = 21.0
+STABILITY_THRESHOLD = 0.005
+STABILITY_SAMPLES = 10
+STABILITY_WAIT_TIME = 150
+POWER_UPDATE_INTERVAL = 1000
 
-# Basic signals to control logic flow
-global timer_elapsed
+# Global Variables
 timer_elapsed = 0
 count = 0
 first_run = 1
-
-# PID Gains for different power ranges
-pid_gains = {
-    "0-1": {"kp": 2000, "ki": 500, "kd": 30},
-    "1-2": {"kp": 1500, "ki": 300, "kd": 20},
-    "2-3": {"kp": 1000, "ki": 200, "kd": 15},
-    "3-4": {"kp": 500, "ki": 100, "kd": 10}
-}
-
-# Initial PID Gains
-kp = pid_gains["0-1"]["kp"]
-ki = pid_gains["0-1"]["ki"]
-kd = pid_gains["0-1"]["kd"]
-
-# Control variables
 v_err_int = 0
 previous_v_err = 0
-integral_min = -5000  # Minimum integral value
-integral_max = 5000   # Maximum integral value
+integral_min = -5000
+integral_max = 5000
+pid_gains = {
+    "0-1": {"kp": 500, "ki": 300, "kd": 20},
+    "1-2": {"kp": 1000, "ki": 400, "kd": 15},
+    "2-3": {"kp": 500, "ki": 100, "kd": 10},
+    "3-4": {"kp": 200, "ki": 50, "kd": 5}
+}
 
-# Tolerance for error
-stability_threshold = 0.005  # Reduced Stability Threshold
-stability_samples = 25
-stability_wait_time = 250  # Reduced Stability Wait Time
+# Initialization
+def initialize():
+    global pwm, va_pin, vb_pin, ina_i2c
+    va_pin = ADC(Pin(28))
+    vb_pin = ADC(Pin(26))
+    ina_i2c = I2C(0, scl=Pin(1), sda=Pin(0), freq=2400000)
 
-# Saturate function
-def saturate(signal, upper, lower): 
+    pwm = PWM(Pin(9))
+    pwm.freq(100000)
+
+    # Start with no energy stored (9000)
+    pwm.duty_u16(MIN_PWM)
+
+# Control Functions
+def saturate(signal, upper, lower):
     return max(min(signal, upper), lower)
 
-# This is the function executed by the loop timer, it simply sets a flag which is used to control the main loop
-def tick(t): 
+# Timer Function
+def tick(t):
     global timer_elapsed
     timer_elapsed = 1
 
-class ina219: 
-    # Register Locations
-    REG_CONFIG = 0x00
-    REG_SHUNTVOLTAGE = 0x01
-    REG_BUSVOLTAGE = 0x02
-    REG_POWER = 0x03
-    REG_CURRENT = 0x04
-    REG_CALIBRATION = 0x05
-    
-    def __init__(self, sr, address, maxi):
+# INA219 Class
+class INA219:
+    def __init__(self, address):
         self.address = address
-        self.shunt = sr
-            
-    def vshunt(self):
-        # Read Shunt register 1, 2 bytes
-        reg_bytes = ina_i2c.readfrom_mem(self.address, self.REG_SHUNTVOLTAGE, 2)
-        reg_value = int.from_bytes(reg_bytes, 'big')
-        if reg_value > 2**15: #negative
-            sign = -1
-            for i in range(16): 
-                reg_value = (reg_value ^ (1 << i))
-        else:
-            sign = 1
-        return float(reg_value) * 1e-5 * sign
-        
-    def vbus(self):
-        # Read Vbus voltage
-        reg_bytes = ina_i2c.readfrom_mem(self.address, self.REG_BUSVOLTAGE, 2)
-        reg_value = int.from_bytes(reg_bytes, 'big') >> 3
-        return float(reg_value) * 0.004
-        
-    def configure(self):
-        ina_i2c.writeto_mem(self.address, self.REG_CONFIG, b'\x19\x9F') # PG = /8
-        ina_i2c.writeto_mem(self.address, self.REG_CALIBRATION, b'\x00\x00')
 
-# Function to wait until voltage stabilizes with averaging
+    def read_register(self, register, length):
+        return int.from_bytes(ina_i2c.readfrom_mem(self.address, register, length), 'big')
+
+    def vshunt(self):
+        reg_value = self.read_register(0x01, 2)
+        return (float(reg_value) * 1e-5) * (-1 if reg_value > 2**15 else 1)
+
+    def vbus(self):
+        reg_value = self.read_register(0x02, 2) >> 3
+        return float(reg_value) * 0.004
+
+    def configure(self):
+        ina_i2c.writeto_mem(self.address, 0x00, b'\x19\x9F')
+        ina_i2c.writeto_mem(self.address, 0x05, b'\x00\x00')
+
+# Utility Functions
 def wait_for_stability():
     stable = False
     samples = []
-    for _ in range(stability_samples):
+    for _ in range(STABILITY_SAMPLES):
         current_va = va_pin.read_u16() / 65536 * 3.3
         samples.append(current_va)
-        utime.sleep_ms(stability_wait_time // stability_samples)
+        utime.sleep_ms(STABILITY_WAIT_TIME // STABILITY_SAMPLES)
     avg_va = sum(samples) / len(samples)
     max_diff = max(abs(v - avg_va) for v in samples)
-    if max_diff < stability_threshold:
+    if max_diff < STABILITY_THRESHOLD:
         stable = True
     return stable
 
-# Function to get user input for desired power output
 def get_desired_power():
     while True:
         try:
             P_desired = float(input("Enter the desired power output in Watts: "))
-            return P_desired
+            if abs(P_desired) <= 4:
+                return P_desired
+            else:
+                print("Power output must be within +-2 Watts of the desired value.")
         except ValueError:
             print("Invalid input. Please enter a numeric value.")
 
-# Function to calculate State of Charge (SoC)
 def calculate_soc(energy_stored):
-    max_capacity = 25.0  # Maximum capacity in Joules
-    return min(100, max(0, (energy_stored - 6.4) / (max_capacity - 6.4) * 100))
+    return min(100, max(0, (energy_stored - 6.4) / (MAX_CAPACITY - 6.4) * 100))
 
-# Function to update PID gains based on desired power
 def update_pid_gains(P_desired):
     global kp, ki, kd
     if 0 <= abs(P_desired) < 1:
@@ -132,88 +110,67 @@ def update_pid_gains(P_desired):
         gains = pid_gains["0-1"]
     kp, ki, kd = gains["kp"], gains["ki"], gains["kd"]
 
-# Start with no energy stored (9000)
-duty = int(min_pwm)
-pwm.duty_u16(duty)
+# Main Loop
+def main():
+    global timer_elapsed, count, first_run, v_err_int, previous_v_err
 
-# Get initial desired power output
-P_desired = get_desired_power()
-update_pid_gains(P_desired)
+    initialize()
 
-# Initialize the start time
-start_time = utime.ticks_ms()
-power_sum = 0
-sample_count = 0
+    while True:
+        if first_run:
+            ina = INA219(64)
+            ina.configure()
+            first_run = 0
+            loop_timer = Timer(mode=Timer.PERIODIC, freq=1000, callback=tick)
 
-previous_input = None  # Variable to store the previous input
+        if timer_elapsed == 1:
+            timer_elapsed = 0
 
-while True:
-    if first_run:
-        # for first run, set up the INA link and the loop timer settings
-        ina = ina219(SHUNT_OHMS, 64, 5)
-        ina.configure()
-        first_run = 0
-        # This starts a 1kHz timer which we use to control the execution of the control loops and sampling
-        loop_timer = Timer(mode=Timer.PERIODIC, freq=1000, callback=tick)        
-        
-    if timer_elapsed == 1: # This is executed at 1kHz
-        timer_elapsed = 0  # Reset the timer flag
+            va = 1.017 * (12490 / 2490) * 3.3 * (va_pin.read_u16() / 65536)
+            vb = 1.015 * (12490 / 2490) * 3.3 * (vb_pin.read_u16() / 65536)
 
-        va = 1.017 * (12490 / 2490) * 3.3 * (va_pin.read_u16() / 65536)  # Va calculation
-        vb = 1.015 * (12490 / 2490) * 3.3 * (vb_pin.read_u16() / 65536)  # Vb calculation
-        Vshunt = ina.vshunt()
-        iL = -(Vshunt / SHUNT_OHMS)  # Invert the current sense for Boost
+            Vshunt = ina.vshunt()
+            iL = -(Vshunt / SHUNT_OHMS)
 
-        # Calculate stored energy
-        E_stored = round(0.5 * C * va**2 , 1)
-        
-        # Calculate power output
-        power_output = va * iL
-        
-        # PID Control
-        error = P_desired - power_output
-        v_err_int += error  # Integrate the error
-        v_err_int = saturate(v_err_int, integral_max, integral_min)  # Clamp the integral term
-        v_err_deriv = error - previous_v_err  # Calculate the derivative of the error
-        
-        # Calculate the PID output
-        pid_output = kp * error + ki * v_err_int + kd * v_err_deriv
-        
-        # Update the duty cycle
-        duty += int(pid_output)
-        duty = saturate(duty, max_pwm, min_pwm)
+            E_stored = round(0.5 * C * va**2 , 1)
+            power_output = va * iL
 
-        # Update the previous error
-        previous_v_err = error
+            if (va >= 16.0 or E_stored >= MAX_CAPACITY or soc >= 100) and P_desired >= 0:
+                P_desired = 0.005
 
-        # Safety feature: If Va crosses 16V, set duty to 42500
-        if va > 16.0:
-            duty = 42300
+            error = P_desired - power_output
+            v_err_int += error
+            v_err_int = saturate(v_err_int, integral_max, integral_min)
+            v_err_deriv = error - previous_v_err
 
-        pwm.duty_u16(duty)
-        
-        wait_for_stability()
+            pid_output = kp * error + ki * v_err_int + kd * v_err_deriv
 
-        # Calculate State of Charge (SoC)
-        soc = calculate_soc(E_stored)
-        
-        # Accumulate power for averaging
-        power_sum += power_output
-        sample_count += 1
-        
-        # Print data in consistent format
-        current_time = utime.ticks_ms()
-        elapsed_time = utime.ticks_diff(current_time, start_time)
-        print(f"P: {power_output*10:.2f} dW, SoC: {soc:.2f}%, T: {elapsed_time//1000} ms")
+            duty += int(pid_output)
+            duty = saturate(duty, MAX_PWM, MIN_PWM)
 
-        # Check for new desired power output input and print average power every 5 seconds
-        if elapsed_time >= 5*1000:
-            average_power = power_sum / sample_count
-            print(f"Average Power over last 5 seconds: {average_power:.2f} W")
-            P_desired = get_desired_power()
-            update_pid_gains(P_desired)  # Update PID gains based on new desired power
-            start_time = utime.ticks_ms()  # Reset the start time
-            power_sum = 0  # Reset power sum
-            sample_count = 0  # Reset sample count
-            start_time = utime.ticks_ms()  # Reset the start time
+            previous_v_err = error
 
+            pwm.duty_u16(duty)
+
+            utime.sleep_ms(5)
+
+            soc = calculate_soc(E_stored)
+
+            count = count + 1
+            timer_elapsed = 0
+
+            if count % (POWER_UPDATE_INTERVAL // 25) == 0:
+                print(f"P: {power_output * 10:.2f} dW, SoC: {soc / 10:.3f}%, T: {count // 200} s")
+
+            if count >= POWER_UPDATE_INTERVAL:
+                average_power = power_sum / sample_count
+                print(f"Average Power over last 5 seconds: {average_power:.2f} W")
+                P_desired = get_desired_power()
+                update_pid_gains(P_desired)
+                power_sum = 0
+                sample_count = 0
+                count = 0
+
+# Start the main loop
+if __name__ == "__main__":
+    main()

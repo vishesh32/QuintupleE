@@ -1,5 +1,6 @@
 from machine import Pin, I2C, ADC, PWM, Timer
 import time, utime
+from collections import deque
 
 # Initialization
 va_pin = ADC(Pin(28))
@@ -14,6 +15,7 @@ pwm_out = min_pwm
 
 C = 0.25  # Capacitance in Farads
 SHUNT_OHMS = 0.10
+max_capacity = 21.0  # Maximum capacity in Joules
 
 # Basic signals to control logic flow
 global timer_elapsed
@@ -23,10 +25,10 @@ first_run = 1
 
 # PID Gains for different power ranges
 pid_gains = {
-    "0-1": {"kp": 2000, "ki": 500, "kd": 30},
-    "1-2": {"kp": 1500, "ki": 300, "kd": 20},
-    "2-3": {"kp": 1000, "ki": 200, "kd": 15},
-    "3-4": {"kp": 500, "ki": 100, "kd": 10}
+    "0-1": {"kp": 500, "ki": 300, "kd": 20},  # Reduced Kp
+    "1-2": {"kp": 1000, "ki": 400, "kd": 15},
+    "2-3": {"kp": 500, "ki": 100, "kd": 10},
+    "3-4": {"kp": 200, "ki": 50, "kd": 5}
 }
 
 # Initial PID Gains
@@ -42,8 +44,8 @@ integral_max = 5000   # Maximum integral value
 
 # Tolerance for error
 stability_threshold = 0.005  # Reduced Stability Threshold
-stability_samples = 25
-stability_wait_time = 250  # Reduced Stability Wait Time
+stability_samples = 10
+stability_wait_time = 150  # Reduced Stability Wait Time
 
 # Saturate function
 def saturate(signal, upper, lower): 
@@ -108,13 +110,14 @@ def get_desired_power():
     while True:
         try:
             P_desired = float(input("Enter the desired power output in Watts: "))
-            return P_desired
+            if abs(P_desired) <= 4:  # Limiting the absolute value of input to <= 4
+                return P_desired
+            else:
+                print("Power output must be within +-2 Watts of the desired value.")
         except ValueError:
             print("Invalid input. Please enter a numeric value.")
-
 # Function to calculate State of Charge (SoC)
 def calculate_soc(energy_stored):
-    max_capacity = 25.0  # Maximum capacity in Joules
     return min(100, max(0, (energy_stored - 6.4) / (max_capacity - 6.4) * 100))
 
 # Function to update PID gains based on desired power
@@ -141,9 +144,9 @@ P_desired = get_desired_power()
 update_pid_gains(P_desired)
 
 # Initialize the start time
-start_time = utime.ticks_ms()
 power_sum = 0
 sample_count = 0
+soc = 0
 
 previous_input = None  # Variable to store the previous input
 
@@ -169,6 +172,9 @@ while True:
         
         # Calculate power output
         power_output = va * iL
+
+        if (va >= 16.0 or E_stored >= max_capacity or soc >=100) and P_desired >=0:
+            P_desired = 0.005        
         
         # PID Control
         error = P_desired - power_output
@@ -186,13 +192,11 @@ while True:
         # Update the previous error
         previous_v_err = error
 
-        # Safety feature: If Va crosses 16V, set duty to 42500
-        if va > 16.0:
-            duty = 42300
-
         pwm.duty_u16(duty)
         
-        wait_for_stability()
+        #wait_for_stability()
+        utime.sleep_ms(5)
+        
 
         # Calculate State of Charge (SoC)
         soc = calculate_soc(E_stored)
@@ -201,13 +205,16 @@ while True:
         power_sum += power_output
         sample_count += 1
         
-        # Print data in consistent format
-        current_time = utime.ticks_ms()
-        elapsed_time = utime.ticks_diff(current_time, start_time)
-        print(f"P: {power_output*10:.2f} dW, SoC: {soc:.2f}%, T: {elapsed_time//1000} ms")
+        # Keep a count of how many times we have executed and reset the timer so we can go back to waiting
+        count = count + 1
+        timer_elapsed = 0
+        
+        if count % 25 == 0:
+            # Print data in consistent format
+            print(f"P: {power_output*10:.2f} dW, SoC: {soc/10:.3f}%, T: {count//200} s")
 
         # Check for new desired power output input and print average power every 5 seconds
-        if elapsed_time >= 5*1000:
+        if count >= 1000:
             average_power = power_sum / sample_count
             print(f"Average Power over last 5 seconds: {average_power:.2f} W")
             P_desired = get_desired_power()
@@ -215,5 +222,7 @@ while True:
             start_time = utime.ticks_ms()  # Reset the start time
             power_sum = 0  # Reset power sum
             sample_count = 0  # Reset sample count
-            start_time = utime.ticks_ms()  # Reset the start time
+            
+            count = 0
+
 
