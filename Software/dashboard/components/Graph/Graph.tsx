@@ -41,23 +41,7 @@ export default function Graph({
     if (leftZoom == undefined) {
       // first click sets the value of the left zoom point
       setLeftZoom(e.activeTooltipIndex);
-    } 
-    // else if (rightZoom != undefined) {
-    //   // second click sets the value of the right zoom click
-
-    //   if (leftZoom < rightZoom) {
-    //     setLeftDom(leftZoom - 1);
-    //     setRightDom(rightZoom - 1);
-    //   } 
-    //   else {
-    //     // incase first selected the RHS
-    //     setLeftDom(rightZoom - 1);
-    //     setRightDom(leftZoom - 1);
-    //   }
-
-    //   setLeftZoom(undefined);
-    //   setRightZoom(undefined);
-    // } 
+    }
     else {
       setLeftZoom(undefined);
       setRightZoom(undefined);
@@ -77,10 +61,10 @@ export default function Graph({
         setLeftDom(rightZoom - 1);
         setRightDom(leftZoom - 1);
       }
+    }
 
-      setLeftZoom(undefined);
-      setRightZoom(undefined);
-    } 
+    setLeftZoom(undefined);
+    setRightZoom(undefined);
   }
 
   const handleZoomOut = () => {
@@ -96,6 +80,7 @@ export default function Graph({
 
   return (
     <div className="w-full h-full bg-blue flex flex-col justify-center items-center">
+      {/* Control buttons */}
       <div className="w-full flex p-1">
 
         {handleRemoveGraph != null && (
@@ -128,6 +113,7 @@ export default function Graph({
       </div>
 
 
+      {/* Graph */}
       <ResponsiveContainer height="80%" width="90%">
         <LineChart
           data={data.data.slice(leftDom, rightDom)}
@@ -166,6 +152,7 @@ export default function Graph({
   );
 }
 
+// tooltip show when hovering over datapoint
 function CustomTooltip({ active, payload, label }: any) {
   let data = [];
   if(active && payload && payload.length > 0 && payload[0].payload) {
@@ -178,7 +165,7 @@ function CustomTooltip({ active, payload, label }: any) {
 
   return (active? (
     <div className='text-black bg-white p-3 rounded-md bg-opacity-90'>
-      {data.map((d) => <p>{d[0]}: {d[1]}</p>)}
+      {data.map((d, i) => <p key={i}>{d[0]}: {d[1]}</p>)}
     </div>
   ) : undefined)
 };

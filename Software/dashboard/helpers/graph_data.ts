@@ -1,27 +1,48 @@
-import Graph from '../components/Graph/Graph';
-interface Variables {
-    name: string,
-    value: string
+enum Collection {
+    algo = "algo-decisions",
+    comp_states = "component-states",
+    days = "days",
+    ticks = "ticks",
 }
 
-const AllVars : Variables[] = [
+interface Variable {
+    name: string,
+    value: string,
+    units: string,
+    collection: Collection,
+}
+
+const AllVars : Variable[] = [
     {
-        name: "Buy Price (Cents)",
+        name: "Buy Price",
         value: "buy_price",
+        units: "Cents",
+        collection: Collection.ticks,
     },
     {
-        name: "Sell Price (Cents)",
+        name: "Sell Price",
         value: "sell_price",
+        units: "Cents",
+        collection: Collection.ticks,
     },
     {
-        name: "Demand (Watts)",
+        name: "Demand",
         value: "demand",
+        units: "Watts",
+        collection: Collection.ticks,
     },
     {
-        name: "Irradiance (%)",
+        name: "Irradiance",
         value: "sun",
+        units: "%",
+        collection: Collection.ticks,
     }
 ];
+
+const xValues = {
+    day: 1,
+    tick: 1,
+}
 
 // interface GraphData {
 //     id: number,
@@ -55,4 +76,5 @@ function FormatString(s: string){
     return s.split("_").map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
 }
 
-export { AllVars, GraphData, FormatString };
+export { AllVars, GraphData, FormatString, xValues };
+export type { Variable }
