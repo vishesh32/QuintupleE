@@ -7,10 +7,11 @@ TICK_LEN = 5
 POLLS_PER_TICK = 4
 
 def getExternalTick():
-    try:
-        return requests.get("https://icelec50015.azurewebsites.net/sun").json()["tick"]
-    except:
-        raise Exception("Failed to get external tick")
+    while True:
+        try:
+            return requests.get("https://icelec50015.azurewebsites.net/sun").json()["tick"]
+        except:
+            pass
 
 def syncWithExternal():
 

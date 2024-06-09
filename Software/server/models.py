@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import List
+from optimisation.models import *
 
 class SMPS(BaseModel):
 	SMPS: str
