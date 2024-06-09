@@ -10,7 +10,7 @@ def compare():
     count = 0
     for i in range(min(len(exact), len(polling))):
         if exact[i][1] == polling[i][1]:
-            totalError += abs(exact[i][0] - polling[i][0])
+            totalError += abs(exact[i][0] - polling[i][0]) if exact[i][0] < polling[i][0] else 0
             count += 1
             print(f"Exact: {exact[i][1]}, Polling: {polling[i][1]}, i: {i}")
     

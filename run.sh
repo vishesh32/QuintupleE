@@ -1,2 +1,3 @@
-cd Software/server
+cd Software/dashboard
 # python3 main.py
+npm run dev

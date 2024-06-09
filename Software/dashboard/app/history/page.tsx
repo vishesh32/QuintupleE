@@ -40,6 +40,7 @@ export default function History() {
 
   return (
     <div>
+      {/* objects that take over the entire screen */}
       {(plotGraphModal || graphFullScreen) && (
         <div className="bg-black w-full h-full z-[10] fixed top-0 bg-opacity-20 backdrop-blur-sm flex justify-center items-center duration-300">
           {plotGraphModal && (
@@ -61,6 +62,8 @@ export default function History() {
           )}
         </div>
       )}
+
+      {/* all of the graphs */}
       <main className="w-full mt-6 grid 2xl:grid-cols-2">
         {graphData.map((data, i) => (
           <Card className="" key={i}>
@@ -74,6 +77,7 @@ export default function History() {
           </Card>
         ))}
 
+        {/* button to add new graphs */}
         <Card className="hover:brightness-[95%] duration-150">
           <button className="w-full h-full" onClick={handleAddPlot}>
             <p className="text-[#001E1D] text-opacity-80 text-[100px]">+</p>
