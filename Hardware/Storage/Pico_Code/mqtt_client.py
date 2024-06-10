@@ -2,6 +2,7 @@ import machine
 import ubinascii
 from wifi import init
 import json
+from helper_functions import get_desired_power
 
 TOPIC = "snd/storage"
 
@@ -87,18 +88,19 @@ class MClient:
         topic_str = topic.decode()
         msg_str = msg.decode()
 
-        print(f"topic: {topic_str} | msg_str: {msg_str}")
+        # print(f"topic: {topic_str} | msg_str: {msg_str}")
 
         data = json.loads(msg_str)
         if topic_str == self.topic:
             self.desired_power = data["payload"]
-            print(f"desired_power: {self.desired_power}")
+            # print(f"desired_power: {self.desired_power}")
 
     def check_msg(self):
         self.client.check_msg()
 
     def get_desired_power(self):
-        return self.desired_power
+        self.check_msg()
+        return get_desired_power(self.desired_power)
 
 # try:
 #     main()

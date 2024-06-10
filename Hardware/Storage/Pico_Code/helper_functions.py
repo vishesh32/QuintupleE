@@ -3,16 +3,12 @@ import utime
 def saturate(signal, upper, lower): 
     return max(min(signal, upper), lower)
 
-def get_desired_power():
-    while True:
-        try:
-            P_desired = float(input("Enter the desired power output in Watts: "))
-            if abs(P_desired) <= 3:  # Limiting the absolute value of input to <= 4
-                return P_desired
-            else:
-                print("Power output must be within +-3 Watts of the desired value.")
-        except ValueError:
-            print("Invalid input. Please enter a numeric value.")
+def get_desired_power(P_desired):
+    # P_desired = float(input("Enter the desired power output in Watts: "))
+    if abs(P_desired) <= 3:  # Limiting the absolute value of input to <= 4
+        return P_desired
+    else:
+        return 0
 
 def calculate_soc(energy_stored, max_capacity):
     return min(100, max(0, (energy_stored - 4.8) / (max_capacity - 4.8) * 100))
