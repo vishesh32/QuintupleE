@@ -13,6 +13,8 @@ from optimisation.algorithm import (
 from optimisation.naive import simulate_day_naive, trend_prediction
 from optimisation.gen_data import getDayData, getTickData
 from optimisation.models import Day, Tick
+
+
 import time
 import matplotlib.pyplot as plt
 

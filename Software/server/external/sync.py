@@ -1,5 +1,6 @@
 from external.parallel_get import get_day_and_tick
 
+
 def sync_with_server(curTick, tick_len=5):
     eTick = curTick
 

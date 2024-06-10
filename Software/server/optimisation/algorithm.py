@@ -358,6 +358,7 @@ def environment_step(action, tick, day_state, print_info=False):
         print("All: ", [round(a, 1) for a in allocations])
         print("Balance: ", balance)
         raise ("Energy not balanced")
+
     return (
         cost,
         total_penalty,
