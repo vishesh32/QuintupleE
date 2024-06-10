@@ -10,9 +10,11 @@ from optimisation.algorithm import (
     load_policy_network_checkpoint,
     predict,
 )
-from optimisation.naive import simulate_day_naive
+from optimisation.naive import simulate_day_naive, trend_prediction
 from optimisation.gen_data import getDayData, getTickData
 from optimisation.models import Day, Tick
+
+
 import time
 import matplotlib.pyplot as plt
 
@@ -53,7 +55,9 @@ def print_postaction(actions, tick, cost):
     print()
 
 
-filename = "server/optimisation/checkpoints/04_e5000_r50_am2_rm0_im10_sta20_abs1.pth"
+filename = (
+    "server/optimisation/checkpoints/06_e5000_r50_am2_rm0_im10_sta20_abs1_tre1.pth"
+)
 policy_network, min, min_epoch = load_policy_network_checkpoint(filename)
 
 env = {
@@ -92,13 +96,6 @@ for i in range(60):
 
     print_postaction(actions, tick, cost)
 
-# naive_fw_end = simulate_day_naive(
-#     day,
-#     ticks,
-#     use_flywheel=True,
-#     satisfy_end=True,
-#     max_alloc_total=MAX_ALLOCATION_TOTAL,
-# )
 
 naive_fw_start = simulate_day_naive(
     day,
@@ -106,22 +103,15 @@ naive_fw_start = simulate_day_naive(
     use_flywheel=True,
     satisfy_end=False,
 )
+trend_costs = trend_prediction(deepcopy(day), ticks)
 
 
 # print("Total Naive FW End:", naive_fw_end)
 # print("Min cost:", min)
 # print("Epochs trained:", min_epoch)
 print("Total Naive FW Start:", naive_fw_start)
+print("Total Trend cost:", sum(trend_costs))
 print("Total RL cost: ", sum(costs_for_day))
-# print(
-#     "Total Naive FW End (100):",
-#     simulate_day_naive(
-#         day, ticks, use_flywheel=True, satisfy_end=True, max_import_export=100
-#     ),
-# )
-
-# Plot sun energy, price, inst demand, and deferable demands
-# Create the plot
 
 
 def scale_data(data):
@@ -130,8 +120,8 @@ def scale_data(data):
 
 
 plt.title("Deferable Demands allocations")
-plt.plot(scale_data(import_prices) * 5 + 5, label="Import Price (Biased)")
 # plt.plot(demands, label="Demands")
+plt.plot(scale_data(import_prices) * 5 + 5, label="Import Price (Biased)")
 plt.plot(dd1_allocations, label="DD1 Allocation")
 plt.plot(dd2_allocations, label="DD2 Allocation")
 plt.plot(dd3_allocations, label="DD3 Allocation")

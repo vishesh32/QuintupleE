@@ -50,7 +50,8 @@ RELEASE_STORE_MULTIPLIER = 0
 # Try 2 & 5
 ALLOCATION_MULTIPLIER = 2
 IMPORT_EXPORT_MULTIPLIER = 10
-
+PRICE_THRESHOLD = 11
+USE_TREND_FOR_ALLOCATION = 1
 
 price_lstm = init_price_lstm(input_size=2)
 
@@ -217,6 +218,36 @@ def update_deferable_demands(
     return sum(allocations), penalty, allocations
 
 
+def update_deferable_demands_trend(
+    energy_available, day_state, action, tick, print_info=False
+):
+    deferables = day_state["deferables"]
+    allocations = satisfy_deferables(
+        tick, deferables, max_alloc_total=MAX_ALLOCATION_TOTAL
+    )
+
+    energy_left = energy_available - sum(allocations)
+
+    # If allocate here...
+    for i, a in enumerate(allocations):
+        if energy_left <= 0:
+            break
+        if allocations[i] != 0:
+            continue
+
+        d = deferables[i]
+        if (
+            tick.sell_price < PRICE_THRESHOLD
+            and d.start < tick.tick
+            and d.end > tick.tick
+        ):
+            allocations[i] = min(energy_left, d.energy)
+            d.energy -= allocations[i]
+            energy_left -= allocations[i]
+
+    return sum(allocations), 0, allocations
+
+
 # LATEST
 def environment_step(action, tick, day_state, print_info=False):
     total_penalty = 0
@@ -230,8 +261,10 @@ def environment_step(action, tick, day_state, print_info=False):
     # print("Sun E: ", round(sun_energy, 1))
 
     # 2. Get energy bought/sold
+    # imp_exp_amt = 0
     imp_exp_amt = min(action[0].item() * IMPORT_EXPORT_MULTIPLIER, MAX_IMPORT_ENERGY)
     total_energy += imp_exp_amt
+
     # print("Initial Imp/Exp: ", round(imp_exp_amt, 1))
 
     # 3. Get energy stored/released
@@ -252,7 +285,11 @@ def environment_step(action, tick, day_state, print_info=False):
 
     # 5. Satisfy deferable demands
     energy_available = sun_energy + release_store_amt + MAX_IMPORT_ENERGY - tick.demand
-    energy_spent, penalty, allocations = update_deferable_demands(
+    # energy_spent, penalty, allocations = update_deferable_demands(
+    #     energy_available, day_state, action, tick
+    # )
+
+    energy_spent, penalty, allocations = update_deferable_demands_trend(
         energy_available, day_state, action, tick
     )
     total_penalty += penalty
@@ -321,6 +358,7 @@ def environment_step(action, tick, day_state, print_info=False):
         print("All: ", [round(a, 1) for a in allocations])
         print("Balance: ", balance)
         raise ("Energy not balanced")
+
     return (
         cost,
         total_penalty,
@@ -369,22 +407,30 @@ def load_policy_network_checkpoint(filename):
     return policy_network, checkpoint["min"], checkpoint["min_index"]
 
 
-def compute_returns(rewards, gamma=0.99):
+def compute_returns(rewards, baseline_rewards, gamma=0.99):
     # rewards = (
     #     torch.tensor(rewards, dtype=torch.float32)
     #     if isinstance(rewards, torch.tensor)
     #     else rewards
     # )
-    rewards = rewards - rewards.mean()
+    # rewards = rewards - rewards.mean()
 
     returns = []
-    R = 0
 
-    for r in reversed(rewards):
-        R = r + gamma * R
+    baseline_returns = []
+    R = 0
+    base_R = 0
+    for i in range(len(rewards) - 1, -1, -1):
+        R = rewards[i] + gamma * R
         returns.insert(0, R)
 
-    returns = torch.tensor(returns, dtype=torch.float32)
+        base_R = baseline_rewards[i] + gamma * base_R
+        baseline_returns.insert(0, base_R)
+
+    returns = torch.tensor(returns, dtype=torch.float32) - torch.tensor(
+        baseline_returns, dtype=torch.float32
+    )
+
     mean = returns.mean()
     std = returns.std()
 

@@ -1,7 +1,7 @@
 from copy import deepcopy
 from optimisation.gen_data import getDayData, getTickData, getTicksForDay
-from optimisation.algorithm import predict
-from optimisation.naive import simulate_day_naive
+from optimisation.algorithm import MAX_ALLOCATION_TOTAL, predict
+from optimisation.naive import simulate_day_naive, trend_prediction
 from optimisation.utils.gen_utils import get_ema
 
 import numpy as np
@@ -26,7 +26,9 @@ def run_validation(start, number_of_days, policy_network, naive_params):
     env = {"deferables": None, "flywheel_amt": 0}
     rl_costs = []
     naive_costs = []
+    trend_algo_costs = []
     history_ticks = []
+
     for day_id in range(start, start + number_of_days):
         day = getDayData(day_id)
         env["deferables"] = deepcopy(day.deferables)
@@ -57,11 +59,22 @@ def run_validation(start, number_of_days, policy_network, naive_params):
                 satisfy_end=naive_params["satisfy_end"],
             )
         )
+        trend_algo_costs.append(
+            sum(
+                trend_prediction(
+                    deepcopy(day),
+                    ticks,
+                    max_alloc_total=MAX_ALLOCATION_TOTAL,
+                    price_threshold=11,
+                    # export_threshold=146,
+                )
+            )
+        )
 
-    return rl_costs, naive_costs
+    return rl_costs, naive_costs, trend_algo_costs
 
 
-def plot_test_results(results, naive_costs, naive_params, basename):
+def plot_test_results(results, naive_costs, trend_costs, naive_params, basename):
     rl_costs = [r["cost"] for r in results]
     ema_amount = 100
     ema_rl_costs = get_ema(rl_costs, ema_amount)
@@ -71,11 +84,12 @@ def plot_test_results(results, naive_costs, naive_params, basename):
     print(f"Min cost: {round(min_cost, 3)} at epoch {min_epoch}")
 
     plt.plot(ema_rl_costs, label="RL")
-    plt.plot(get_ema(naive_costs, ema_amount), label=get_naive_label(naive_params))
+    # plt.plot(get_ema(trend_costs, ema_amount), label="Trend Prediction Costs")
+    # plt.plot(get_ema(naive_costs, ema_amount), label=get_naive_label(naive_params))
     plt.xlabel("Epochs (days)")
     plt.ylabel("Cost")
     plt.title("Training cost over days (ema=100)")
-
+    # plt.legend()
     # mid_y = max(get_ema(naive_costs, ema_amount)) // 2
     # plt.text(0, mid_y,
     # f'''Average RL cost: {round(np.mean(rl_costs), 2)}
@@ -91,6 +105,5 @@ def plot_test_results(results, naive_costs, naive_params, basename):
         va="top",
     )
 
-    plt.legend()
     plt.savefig(f"plots/{basename}_train.png", dpi=500)
     plt.show()
