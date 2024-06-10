@@ -2,23 +2,36 @@ import machine
 import ubinascii
 from wifi import init
 import json
+from enum import Enum
 
 # uncomment this line to import the helper functions
 # and line 60
 # from helper_functions import get_desired_power
 
-TOPIC = "pico"
+# topics
+PICO_TOPIC = "pico"
 SERVER_TOPIC = "server"
 UI_TOPIC = "ui"
 
+# MQTT broker settings
 MQTT_CLIENT_ID = ubinascii.hexlify(machine.unique_id())
 MQTT_BROKER = "18.130.108.45"
 MQTT_BROKER_PORT = 1883
 
-# data format example for irradiance:
+
+# all devices
+class Device(Enum):
+    STORAGE = "storage"
+    EXTERNAL_GRID = "external-grid"
+    PV_ARRAY = "pv-array"
+    LOADR="loadR"
+    LOADY="loadY"
+    LOADB="loadB"
+    LOADK="loadK"
+
 
 class MClient:
-    def __init__(self, topic=TOPIC):
+    def __init__(self, device: str=None):
         init()
 
         from umqtt.simple import MQTTClient
@@ -36,51 +49,67 @@ class MClient:
         client.connect()
 
         self.client = client
-        self.client.subscribe(topic)
-        print(f"Waiting for messages on {topic}")
+        self.client.subscribe(PICO_TOPIC)
+        print(f"Waiting for messages on {PICO_TOPIC}")
 
-        self.topic = topic
         self.desired_power = 0
         self.power_req = 0
+        self.irradiance = 0
+
+        self.device = device
     
     def on_mqtt_msg(self, topic, msg):
-        # topic_str = topic.decode()
-        msg_str = msg.decode()
+        try:
+            msg_str = msg.decode()
 
-        # print(f"topic: {topic_str} | msg_str: {msg_str}")
+            data = json.loads(msg_str)
+            if "target" not in data or "payload" not in data:
+                raise Exception("Invalid message format")
+        
+            elif data["target"] == Device.STORAGE.value:
+                self.desired_power = data["payload"]
+                # print(f"desired_power: {self.desired_power}")
+            elif data["target"] == self.device:
+                self.power_req = data["payload"]
+                print(f"power_req: {self.power_req}")
 
-        data = json.loads(msg_str)
-        if data["target"] == "snd/storage":
-            self.desired_power = data["payload"]
-            # print(f"desired_power: {self.desired_power}")
-        elif data["target"] == "snd/load":
-            self.power_req = data["payload"]
-            print(f"power_req: {self.power_req}")
+            elif data["target"] == Device.PV_ARRAY.value:
+                self.irradiance = data["payload"]
+                print(f"Irradiance: {self.irradiance}")
+
+        except Exception as e:
+            print(f"Error when processing message: {e}\nRecieved: {topic.decode()}, {msg.decode()}")
 
     def check_msg(self):
         self.client.check_msg()
 
-    def get_desired_power(self):
-        self.check_msg()
-        # return get_desired_power(self.desired_power)
     
     def send_external_grid(self, import_p, export_p):
-        self.client.publish(SERVER_TOPIC, json.dumps({"target": "external-grid", "payload":{"import_power": import_p, "export_power": export_p}}))
+        self.client.publish(SERVER_TOPIC, json.dumps({"target": Device.EXTERNAL_GRID.value, "payload":{"import_power": import_p, "export_power": export_p}}))
 
     def send_load_power(self, power):
-        self.client.publish(SERVER_TOPIC, json.dumps({"target": "load", "payload": power}))
+        self.client.publish(SERVER_TOPIC, json.dumps({"target": self.device, "payload": power}))
 
     def send_shunt_current(self, current):
-        self.client.publish(UI_TOPIC, json.dumps({"target": "load-current", "payload": current}))
+        self.client.publish(UI_TOPIC, json.dumps({"target": self.device, "payload": current}))
 
     def get_power_req(self):
         self.check_msg()
         return self.power_req
+    
+    def get_desired_power(self):
+        self.check_msg()
+        # return get_desired_power(self.desired_power)
 
-# try:
-#     main()
+    def get_irradiance(self):
+        self.check_msg()
+        return self.irradiance
 
-# except Exception as e:
-#     print(e)
-#     print("\n\n\n")
-#     machine.reset()
+    def send_soc(self, soc):
+        # TODO: check if this needs to be changed to the UI
+        self.client.publish(SERVER_TOPIC, json.dumps({"target": Device.STORAGE.value, "payload": {"type": "soc", "value":soc}}))
+    
+    def send_storage_error(self, error):
+        # TODO: check if this needs to be changed
+        self.client.publish(SERVER_TOPIC, json.dumps({"target": Device.STORAGE.value, "payload": {"type": "error", "value":error}}))
+

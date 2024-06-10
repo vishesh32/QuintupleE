@@ -105,7 +105,7 @@ while True:
         # Limit discharging when battery is near empty
         if P_desired == 0:
             # Scale P_desired based on SoC
-            P_desired = 0.01 + soc * (0.05 - 0.01)
+            P_desired = 0.01 + soc/100 * (0.05 - 0.01)
             
         # PID Control
         error = P_desired - power_output
