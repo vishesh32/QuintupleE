@@ -2,8 +2,8 @@ import network
 from time import sleep
 
 
-ssid = 'jellyware'
-password = '968Of72]'
+ssid = ''
+password = ''
 
 def init():
     #Connect to WLAN

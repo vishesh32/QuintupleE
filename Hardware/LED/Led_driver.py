@@ -1,5 +1,8 @@
 from machine import Pin, I2C, ADC, PWM
 from PID import PID
+from mqtt_client import MClient
+
+client = MClient()
 
 vret_pin = ADC(Pin(26))
 vout_pin = ADC(Pin(28))
@@ -16,7 +19,7 @@ pwm_ref = 0
 setpoint = 0.0
 delta = 0.05
 r_shunt = 1.02
-power_req = 0.7
+# power_req = 0.7
 def power_control(duty,power_req,power):
     if power <= power_req - 0.02:
         duty = saturate(duty + 10)
@@ -32,6 +35,7 @@ def saturate(duty):
     return duty
 
 while True:
+    power_req = client.get_power_req()
     
     pwm_en.value(1)
 
@@ -55,7 +59,14 @@ while True:
         print("Vout = {:.3f}".format(vout))
         print("Vret = {:.3f}".format(vret))
         print("Duty = {:.0f}".format(pwm_out))
+
+
+        # show on ui
         print("Output Current = {:.3f}".format(i_shunt))
+        client.send_shunt_current(i_shunt)
+
+        # store this
         print("Output Power = {:.3f}".format(power))
+        client.send_load_power(power)
         count = 0
         pid.setpoint = setpoint
