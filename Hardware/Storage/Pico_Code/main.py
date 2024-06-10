@@ -1,4 +1,4 @@
-from machine import Pin, PWM, Timer, ADC
+from machine import Pin, PWM, Timer, ADC, I2C
 import utime
 from ina219 import INA219
 from pid_controller import PIDController
@@ -7,12 +7,13 @@ from helper_functions import saturate, get_desired_power, calculate_soc, update_
 # Constants
 SHUNT_OHMS = 0.1
 C = 0.25
-MAX_CAPACITY = 21
+MAX_CAPACITY = 25.0
 
 # Initialization
 va_pin = ADC(Pin(28))
 vb_pin = ADC(Pin(26))
 pwm = PWM(Pin(9))
+ina_i2c = I2C(0, scl=Pin(1), sda=Pin(0), freq=2400000)
 loop_timer = None
 
 min_pwm = 9000
@@ -25,15 +26,15 @@ timer_elapsed = 0
 count = 0
 first_run = 1
 
-# Initial PID Gains
+# PID Gains for different power ranges
 pid_gains = {
-    "0-1": {"kp": 500, "ki": 300, "kd": 20},  # Reduced Kp
-    "1-2": {"kp": 1000, "ki": 100, "kd": 30}
+    "0-1": {"kp": 50, "ki": 5, "kd": 10},
+    "1-2": {"kp": 25, "ki": 5, "kd": 10},
+    "2-3": {"kp": 10, "ki": 5, "kd": 10},
 }
 
-kp = pid_gains["0-1"]["kp"]
-ki = pid_gains["0-1"]["ki"]
-kd = pid_gains["0-1"]["kd"]
+# Initial PID Gains
+kp, ki, kd = pid_gains["0-1"]["kp"], pid_gains["0-1"]["ki"], pid_gains["0-1"]["kd"]
 
 # Control variables
 v_err_int = 0
@@ -47,7 +48,10 @@ pwm.duty_u16(duty)
 
 # Get initial desired power output
 P_desired = get_desired_power()
-update_pid_gains(P_desired, pid_gains)
+kp, ki, kd = update_pid_gains(P_desired, pid_gains)
+
+# Initialize the PID controller
+pid_controller = PIDController(kp, ki, kd, integral_min, integral_max)
 
 # Initialize the start time
 power_sum = 0
@@ -61,7 +65,6 @@ def tick(t):
     timer_elapsed = 1
 
 while True:
-    # Main loop
     if first_run:
         # for first run, set up the INA link and the loop timer settings
         ina = INA219(SHUNT_OHMS, 64, 5)
@@ -70,10 +73,9 @@ while True:
         # This starts a 1kHz timer which we use to control the execution of the control loops and sampling
         loop_timer = Timer(mode=Timer.PERIODIC, freq=1000, callback=tick)        
     
-    # Main loop logic
     if timer_elapsed == 1: # This is executed at 1kHz
         timer_elapsed = 0  # Reset the timer flag
-        
+
         va = 1.017 * (12490 / 2490) * 3.3 * (va_pin.read_u16() / 65536)  # Va calculation
         vb = 1.015 * (12490 / 2490) * 3.3 * (vb_pin.read_u16() / 65536)  # Vb calculation
         Vshunt = ina.vshunt()
@@ -85,31 +87,27 @@ while True:
         # Calculate power output
         power_output = va * iL
 
-        if (va >= 16.0 or E_stored >= MAX_CAPACITY or soc >=100) and P_desired >=0:
-            P_desired = 0.005        
-        
+        # Limit charging when battery is near full capacity
+        if (E_stored >= MAX_CAPACITY * 0.90 or soc >= 90) and P_desired >= 0:
+            P_desired = 0.005
+
+        # Limit discharging when battery is near empty
+        if (E_stored <= 0.05 or soc <= 5) and P_desired < 0:
+            P_desired = -0.005
+            
         # PID Control
         error = P_desired - power_output
-        v_err_int += error  # Integrate the error
-        v_err_int = saturate(v_err_int, integral_max, integral_min)  # Clamp the integral term
-        v_err_deriv = error - previous_v_err  # Calculate the derivative of the error
-        
-        # Calculate the PID output
-        pid_output = kp * error + ki * v_err_int + kd * v_err_deriv
+        pid_output = pid_controller.update(error)
         
         # Update the duty cycle
         duty += int(pid_output)
         duty = saturate(duty, max_pwm, min_pwm)
 
-        # Update the previous error
-        previous_v_err = error
-
         pwm.duty_u16(duty)
         
-        # Our 1kHz timer becomes 200Hz
-        # For the sake of stablelising voltage
+        # Wait for stability
         utime.sleep_ms(5)
-
+        
         # Calculate State of Charge (SoC)
         soc = calculate_soc(E_stored, MAX_CAPACITY)
         
@@ -123,17 +121,15 @@ while True:
         
         if count % 25 == 0:
             # Print data in consistent format
-            print(f"P: {power_output*10:.2f} dW, SoC: {soc/10:.3f}%, T: {count//200} s")
+            print(f"P: {power_output*10:.2f} dW, SoC: {soc/10:.2f}d%, iL: {iL*1000:.2f} mA. T: {count//200} s")
 
         # Check for new desired power output input and print average power every 5 seconds
         if count >= 1000:
             average_power = power_sum / sample_count
             print(f"Average Power over last 5 seconds: {average_power:.2f} W")
             P_desired = get_desired_power()
-            update_pid_gains(P_desired, pid_gains)
-            start_time = utime.ticks_ms()  # Reset the start time
+            kp, ki, kd = update_pid_gains(P_desired, pid_gains)  # Update PID gains based on new desired power
+            pid_controller = PIDController(kp, ki, kd, integral_min, integral_max)
             power_sum = 0  # Reset power sum
             sample_count = 0  # Reset sample count
-            
             count = 0
-

@@ -15,7 +15,7 @@ pwm_out = min_pwm
 
 C = 0.25  # Capacitance in Farads
 SHUNT_OHMS = 0.10
-max_capacity = 21.0  # Maximum capacity in Joules
+max_capacity = 25.0  # Maximum capacity in Joules
 
 # Basic signals to control logic flow
 global timer_elapsed
@@ -25,10 +25,9 @@ first_run = 1
 
 # PID Gains for different power ranges
 pid_gains = {
-    "0-1": {"kp": 500, "ki": 300, "kd": 20},  # Reduced Kp
-    "1-2": {"kp": 1000, "ki": 400, "kd": 15},
-    "2-3": {"kp": 500, "ki": 100, "kd": 10},
-    "3-4": {"kp": 200, "ki": 50, "kd": 5}
+    "0-1": {"kp": 50, "ki": 5, "kd": 10},	# Good enough
+    "1-2": {"kp": 25, "ki": 5, "kd": 10},	# Test
+    "2-3": {"kp": 10, "ki": 5, "kd": 10},	# Test
 }
 
 # Initial PID Gains
@@ -110,27 +109,25 @@ def get_desired_power():
     while True:
         try:
             P_desired = float(input("Enter the desired power output in Watts: "))
-            if abs(P_desired) <= 4:  # Limiting the absolute value of input to <= 4
+            if abs(P_desired) <= 3:  # Limiting the absolute value of input to <= 4
                 return P_desired
             else:
-                print("Power output must be within +-2 Watts of the desired value.")
+                print("Power output must be within +-3 Watts of the desired value.")
         except ValueError:
             print("Invalid input. Please enter a numeric value.")
 # Function to calculate State of Charge (SoC)
 def calculate_soc(energy_stored):
-    return min(100, max(0, (energy_stored - 6.4) / (max_capacity - 6.4) * 100))
+    return min(100, max(0, (energy_stored - 4.8) / (max_capacity - 4.8) * 100))
 
 # Function to update PID gains based on desired power
 def update_pid_gains(P_desired):
     global kp, ki, kd
-    if 0 <= abs(P_desired) < 1:
+    if 0 <= abs(P_desired) <= 1:
         gains = pid_gains["0-1"]
-    elif 1 <= abs(P_desired) < 2:
+    elif 1 < abs(P_desired) <= 2:
         gains = pid_gains["1-2"]
-    elif 2 <= abs(P_desired) < 3:
+    elif 2 < abs(P_desired) <= 3:
         gains = pid_gains["2-3"]
-    elif 3 <= abs(P_desired) <= 4:
-        gains = pid_gains["3-4"]
     else:
         gains = pid_gains["0-1"]
     kp, ki, kd = gains["kp"], gains["ki"], gains["kd"]
@@ -173,9 +170,14 @@ while True:
         # Calculate power output
         power_output = va * iL
 
-        if (va >= 16.0 or E_stored >= max_capacity or soc >=100) and P_desired >=0:
-            P_desired = 0.005        
-        
+        # Limit charging when battery is near full capacity
+        if (E_stored >= max_capacity * 0.90 or soc >= 90) and P_desired >= 0:
+            P_desired = 0.005
+
+        # Limit discharging when battery is near empty
+        if (E_stored <= 0.05 or soc <= 5) and P_desired < 0:
+            P_desired = -0.005
+                
         # PID Control
         error = P_desired - power_output
         v_err_int += error  # Integrate the error
@@ -211,7 +213,7 @@ while True:
         
         if count % 25 == 0:
             # Print data in consistent format
-            print(f"P: {power_output*10:.2f} dW, SoC: {soc/10:.3f}%, T: {count//200} s")
+            print(f"P: {power_output*10:.2f} dW, SoC: {soc/10:.2f}d%, iL: {iL*1000:.2f} mA. T: {count//200} s")
 
         # Check for new desired power output input and print average power every 5 seconds
         if count >= 1000:
@@ -224,5 +226,3 @@ while True:
             sample_count = 0  # Reset sample count
             
             count = 0
-
-
