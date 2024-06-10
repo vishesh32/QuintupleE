@@ -53,7 +53,9 @@ def print_postaction(actions, tick, cost):
     print()
 
 
-filename = "server/optimisation/checkpoints/04_e5000_r50_am2_rm0_im10_sta20_abs1.pth"
+filename = (
+    "server/optimisation/checkpoints/06_e5000_r50_am2_rm0_im10_sta20_abs1_tre1.pth"
+)
 policy_network, min, min_epoch = load_policy_network_checkpoint(filename)
 
 env = {
@@ -110,30 +112,30 @@ print("Total Trend cost:", sum(trend_costs))
 print("Total RL cost: ", sum(costs_for_day))
 
 
-# def scale_data(data):
-#     data = np.array(data)
-#     return data / (data.max() - data.min())
+def scale_data(data):
+    data = np.array(data)
+    return data / (data.max() - data.min())
 
 
-# plt.title("Deferable Demands allocations")
-# # plt.plot(scale_data(import_prices) * 5 + 5, label="Import Price (Biased)")
-# # plt.plot(demands, label="Demands")
-# plt.plot(dd1_allocations, label="DD1 Allocation")
-# plt.plot(dd2_allocations, label="DD2 Allocation")
-# plt.plot(dd3_allocations, label="DD3 Allocation")
-# plt.legend()
-# plt.show()
-
-# # plt.plot(import_prices, label="Import Price")
-# plt.title("Import / Export and Release / Store actions (RL)")
-# # allocation_demands = [
-# #     dd1_allocations[i] + dd2_allocations[i] + dd3_allocations[i]
-# #     for i in range(len(dd1_allocations))
-# # ]
-# # plt.plot(allocation_demands, label="Allocation Demands")
+plt.title("Deferable Demands allocations")
 # plt.plot(demands, label="Demands")
-# plt.plot(sun_energies, label="Sun Energy")
-# plt.plot(import_export, label="Import / Export")
-# plt.plot(release_store, label="Release / Store")
-# plt.legend()
-# plt.show()
+plt.plot(scale_data(import_prices) * 5 + 5, label="Import Price (Biased)")
+plt.plot(dd1_allocations, label="DD1 Allocation")
+plt.plot(dd2_allocations, label="DD2 Allocation")
+plt.plot(dd3_allocations, label="DD3 Allocation")
+plt.legend()
+plt.show()
+
+# plt.plot(import_prices, label="Import Price")
+plt.title("Import / Export and Release / Store actions (RL)")
+# allocation_demands = [
+#     dd1_allocations[i] + dd2_allocations[i] + dd3_allocations[i]
+#     for i in range(len(dd1_allocations))
+# ]
+# plt.plot(allocation_demands, label="Allocation Demands")
+plt.plot(demands, label="Demands")
+plt.plot(sun_energies, label="Sun Energy")
+plt.plot(import_export, label="Import / Export")
+plt.plot(release_store, label="Release / Store")
+plt.legend()
+plt.show()

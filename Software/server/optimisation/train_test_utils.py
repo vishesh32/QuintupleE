@@ -59,13 +59,17 @@ def run_validation(start, number_of_days, policy_network, naive_params):
                 satisfy_end=naive_params["satisfy_end"],
             )
         )
-        # trend_algo_costs.append(
-        #     sum(
-        #         trend_prediction(
-        #             deepcopy(day), ticks, max_alloc_total=MAX_ALLOCATION_TOTAL
-        #         )
-        #     )
-        # )
+        trend_algo_costs.append(
+            sum(
+                trend_prediction(
+                    deepcopy(day),
+                    ticks,
+                    max_alloc_total=MAX_ALLOCATION_TOTAL,
+                    price_threshold=11,
+                    export_threshold=146,
+                )
+            )
+        )
 
     return rl_costs, naive_costs, trend_algo_costs
 
@@ -80,12 +84,12 @@ def plot_test_results(results, naive_costs, trend_costs, naive_params, basename)
     print(f"Min cost: {round(min_cost, 3)} at epoch {min_epoch}")
 
     plt.plot(ema_rl_costs, label="RL")
-    plt.plot(get_ema(naive_costs, ema_amount), label="Trend Prediction Costs")
-    plt.plot(get_ema(naive_costs, ema_amount), label=get_naive_label(naive_params))
+    # plt.plot(get_ema(trend_costs, ema_amount), label="Trend Prediction Costs")
+    # plt.plot(get_ema(naive_costs, ema_amount), label=get_naive_label(naive_params))
     plt.xlabel("Epochs (days)")
     plt.ylabel("Cost")
     plt.title("Training cost over days (ema=100)")
-
+    # plt.legend()
     # mid_y = max(get_ema(naive_costs, ema_amount)) // 2
     # plt.text(0, mid_y,
     # f'''Average RL cost: {round(np.mean(rl_costs), 2)}
@@ -101,6 +105,5 @@ def plot_test_results(results, naive_costs, trend_costs, naive_params, basename)
         va="top",
     )
 
-    plt.legend()
     plt.savefig(f"plots/{basename}_train.png", dpi=500)
     plt.show()
