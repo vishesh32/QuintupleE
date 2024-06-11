@@ -144,10 +144,6 @@ while True:
         
         # This set of prints executes every 100 loops by default and can be used to output debug or extra info over USB enable or disable lines as needed
         if count > 5:
-            print("Va = {:.3f} V".format(va))
-            print("Vb = {:.3f} V".format(vb))
-            print("iL = {:.3f} A".format(iL))
-            print("Po = {:.5f} W".format(output_power))
-            print("duty = {:d}".format(duty))
-            print(" ")
+            print("Po: {:.5f}".format(output_power))
             count = 0
+
