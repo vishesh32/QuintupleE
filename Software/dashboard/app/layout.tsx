@@ -3,8 +3,8 @@ import { Inter, Karla } from "next/font/google";
 import "./globals.css";
 import NavBar from '../components/NavBar/NavBar';
 
-// const inter = Inter({ subsets: ["latin"] });
-const karla = Karla({subsets: ["latin"]});
+const inter = Inter({ subsets: ["latin"] });
+// const karla = Karla({subsets: ["latin"]});
 
 export const metadata: Metadata = {
   title: "Quintuple E",
@@ -18,8 +18,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${karla.className} text-secondary`}>
-        <header className="w-full"><NavBar></NavBar></header>
+      <body className={`${inter.className} text-secondary`}>
+        <header className="w-full text-primary"><NavBar></NavBar></header>
         {children}
       </body>
     </html>

@@ -1,17 +1,29 @@
 import React from "react";
 
 export default function Card({
-  children,
+  top,
+  middle,
+  bottom,
   className,
 }: {
-  children: React.ReactNode;
+  top: React.ReactNode;
+  middle: React.ReactNode;
+  bottom: React.ReactNode;
   className: string;
 }) {
   return (
     <div
-      className={`rounded-[20px] bg-background shadow-card h-[600px] flex justify-center items-center flex-col m-2 w-[98%] ${className}`}
+      className={`bg-primary p-6 rounded-lg h-fit flex-auto ${className}`}
     >
-      {children}
+      <div className="font-semibold text-[#FF8906]">
+        {top}
+      </div>
+      <div className="font-bold text-4xl flex flex-row mt-3 mb-3">
+        {middle}
+      </div>
+      <div className="font-semibold text-[#E53170]">
+        {bottom}
+      </div>
     </div>
   );
 }

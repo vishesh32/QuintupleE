@@ -8,14 +8,9 @@ import { getTick } from './actions';
 import { GraphData } from '@/helpers/graph_data';
 import History from './history/page';
 import { MQTTClient } from '@/helpers/mqtt_client';
-import BigCard from '@/components/Card/BigCard';
 
 export default function Home() {
   return (
-    <BigCard className="">
-      <div className='w-full h-full'>
-        div
-      </div>
-    </BigCard>
+    <div></div>
   )
 }

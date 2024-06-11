@@ -20,14 +20,14 @@ MQTT_BROKER_PORT = 1883
 
 
 # all devices
-class Device(Enum):
+class DEVICE :
     STORAGE = "storage"
     EXTERNAL_GRID = "external-grid"
-    PV_ARRAY = "pv-array"
-    LOADR="loadR"
-    LOADY="loadY"
-    LOADB="loadB"
-    LOADK="loadK"
+    PV_ARRAY =  "pv-array"
+    LOADR = "loadR"
+    LOADY = "loadY"
+    LOADB = "loadB"
+    LOADK = "loadK"
 
 
 class MClient:
@@ -66,14 +66,14 @@ class MClient:
             if "target" not in data or "payload" not in data:
                 raise Exception("Invalid message format")
         
-            elif data["target"] == Device.STORAGE.value:
+            elif data["target"] == DEVICE.STORAGE:
                 self.desired_power = data["payload"]
                 # print(f"desired_power: {self.desired_power}")
             elif data["target"] == self.device:
                 self.power_req = data["payload"]
                 print(f"power_req: {self.power_req}")
 
-            elif data["target"] == Device.PV_ARRAY.value:
+            elif data["target"] == DEVICE.PV_ARRAY:
                 self.irradiance = data["payload"]
                 print(f"Irradiance: {self.irradiance}")
 
@@ -84,7 +84,7 @@ class MClient:
         self.client.check_msg()
     
     def send_external_grid(self, import_p, export_p):
-        self.client.publish(SERVER_TOPIC, json.dumps({"target": Device.EXTERNAL_GRID.value, "payload":{"import_power": import_p, "export_power": export_p}}))
+        self.client.publish(SERVER_TOPIC, json.dumps({"target": DEVICE.EXTERNAL_GRID, "payload":{"import_power": import_p, "export_power": export_p}}))
 
     def send_load_power(self, power):
         self.client.publish(SERVER_TOPIC, json.dumps({"target": self.device, "payload": power}))
@@ -106,12 +106,11 @@ class MClient:
 
     def send_soc(self, soc):
         # TODO: check if this needs to be changed to the UI
-        self.client.publish(SERVER_TOPIC, json.dumps({"target": Device.STORAGE.value, "payload": {"type": "soc", "value":soc}}))
+        self.client.publish(SERVER_TOPIC, json.dumps({"target": DEVICE.STORAGE, "payload": {"type": "soc", "value":soc}}))
     
     def send_storage_power(self, power):
-        # TODO: check if this needs to be changed
-        self.client.publish(SERVER_TOPIC, json.dumps({"target": Device.STORAGE.value, "payload": {"type": "power", "value":power}}))
+        self.client.publish(SERVER_TOPIC, json.dumps({"target": DEVICE.STORAGE, "payload": {"type": "power", "value":power}}))
     
     def send_pv_power(self, power):
-        self.client.publish(SERVER_TOPIC, json.dumps({"target": Device.PV_ARRAY.value, "payload": power}))
+        self.client.publish(SERVER_TOPIC, json.dumps({"target": DEVICE.PV_ARRAY, "payload": power}))
 

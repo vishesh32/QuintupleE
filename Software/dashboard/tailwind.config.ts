@@ -9,11 +9,9 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        "background": "#141414",
-        "big-card": "#242629",
-        "small-card": "#16161A",
-        "primary": "#2CB67D",
-        "secondary": "#FFFFFF",
+        "background": "#0F0E17",
+        "primary": "#FFFFFF",
+        "secondary": "#000000",
       },
       boxShadow: {
         "card": "0px 4px 12px 0px rgba(0, 0, 0, 0.25);",
