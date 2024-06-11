@@ -1,65 +1,59 @@
 import paho.mqtt.client as paho
 import json
 from models import SMPS
+from enum import Enum
 
-# required to not recieve same msg as one sent
-RCV = "rcv/"
-SND = "snd/"
+# all the picos you can connect to
+# sent a message to the pico using the PICO_TOPIC
+# then in the message body, send the device in the target
+# this is used in hardware as well
+class Device(Enum):
+    STORAGE = "storage"
+    EXTERNAL_GRID = "external-grid"
+    PV_ARRAY = "pv-array"
+    LOADR="loadR"
+    LOADY="loadY"
+    LOADB="loadB"
+    LOADK="loadK"
 
-SUN_TOPIC = "sun"
-EXT_GRID_TOPIC = "external-grid"
-STORAGE_TOPIC = "storage"
-LOAD_TOPICS = ["load1", "load2", "load3", "load4"]
-
-MQTT_URL = "6ace09b77c4546d5bd66c724bc9abb0e.s1.eu.hivemq.cloud:8883"
-
+PICO_TOPIC = "pico"
+SERVER_TOPIC = "server"
 
 class MClient:
-    def __init__(self, broker_addr="localhost", broker_port="1883"):
+    def __init__(self, broker_addr="18.130.108.45", broker_port="1883"):
         self.client = paho.Client(paho.CallbackAPIVersion.VERSION2)
         self.client.on_connect = handle_connect
         self.client.on_message = self.handle_msg
         self.db_data = {}
 
-        # client.username_pw_set(username="quintuplee", password="solar1")
-        # self.client.username_pw_set(username="your_username", password="your_password")
-        self.client.username_pw_set(username="admin", password="QuintupleE1")
-        self.client.tls_set(
-            ca_certs=None,
-            certfile=None,
-            keyfile=None,
-            cert_reqs=paho.ssl.CERT_REQUIRED,
-            tls_version=paho.ssl.PROTOCOL_TLSv1_2,
-            ciphers=None,
-        )
+        # self.client.username_pw_set(username="admin", password="QuintupleE1")
+        # self.client.tls_set(
+        #     ca_certs=None,
+        #     certfile=None,
+        #     keyfile=None,
+        #     cert_reqs=paho.ssl.CERT_REQUIRED,
+        #     tls_version=paho.ssl.PROTOCOL_TLSv1_2,
+        #     ciphers=None,
+        # )
 
-        self.client.connect(
-            "6ace09b77c4546d5bd66c724bc9abb0e.s1.eu.hivemq.cloud", 8883, keepalive=120
-        )
-
-        self.client.loop_start()
-        # if self.client.connect("localhost", 1883, keepalive=120) != 0:
-        #     raise Exception("Failed to connect to Broker")
-        # else:
-        #     self.client.loop_start()
+        # self.client.loop_start()
+        if  self.client.connect(broker_addr, broker_port, keepalive=1000) != 0:
+            raise Exception("Failed to connect to Broker")
+        else:
+            self.client.loop_start()
 
     def send_sun_data(self, sun_val):
-        self.client.publish(SND + SUN_TOPIC, json.dumps({"sun": sun_val}), 0)
+        self.client.publish(PICO_TOPIC, json.dumps({"target": Device.PV_ARRAY.value, "payload": sun_val}), 2)
 
-    def send_ext_grid_smps(self, energy):
-        self.client.publish(SND + EXT_GRID_TOPIC, json.dumps({"energy": energy}), 0)
+    # def send_external_grid(self, power):
+    #     self.client.publish(PICO_TOPIC, json.dumps({"target": Device.EXTERNAL_GRID.value, "payload": power}), 2)
 
-    def send_storage_smps(self, energy):
-        self.client.publish(SND + STORAGE_TOPIC, json.dumps({"energy": energy}), 0)
+    def send_storage_power(self, power):
+        self.client.publish(PICO_TOPIC, json.dumps({"target": Device.STORAGE, "payload": power}), 2)
 
     # transmit actual voltage div by 10
-    def send_load(self, load_num, setpoint):
-        if not (load_num >= 1 and load_num <= 4):
-            raise Exception("Invalid value for load_num, when sending data to the load")
-
-        self.client.publish(
-            SND + LOAD_TOPICS[load_num - 1], json.dumps({"setpoint": setpoint}), 2
-        )
+    def send_load_power(self, load: Device, power):
+        self.client.publish(PICO_TOPIC, json.dumps({"target": Device.STORAGE, "payload": power}), 2)
 
     def end(self):
         self.client.disconnect()
@@ -67,20 +61,38 @@ class MClient:
     def handle_msg(self, client, userdata, message):
         msg_str = message.payload.decode()
         topic = message.topic
-        print(f"Message received: {message.payload.decode()} on topic {message.topic}")
+        print(f"Message received: {msg_str} on topic {topic}")
 
-        self.db_data[topic] = json.loads(msg_str, object_hook=lambda x: SMPS(**x))
-        # when message recieved - write to DB
+        data = json.loads(msg_str)
+
+        if "target" not in data or "payload" not in data:
+            raise Exception("Invalid message format")
+        
+        elif data["target"] == Device.EXTERNAL_GRID.value:
+            import_power = data["payload"]["import_power"] 
+            export_power = data["payload"]["export_power"]
+
+        elif data["target"] == Device.PV_ARRAY.value:
+            pv_power = data["payload"]
+        
+        elif data["target"] == Device.STORAGE.value:
+            if data["payload"]["type"] == "soc":
+                soc = data["payload"]["value"]
+            elif data["payload"]["type"] == "power":
+                power = data["payload"]["value"]
+
+        else:
+            # then use target to check what type of load it is
+            # target is storing it as a string
+            load = data["target"]
+            load_power = data["payload"]
+            pass
+            
+
 
 
 def handle_connect(client, userdata, flags, rc, o):
     if rc != 0:
         raise Exception("Failed to connect to broker")
-
-    client.subscribe(RCV + SUN_TOPIC)
-    client.subscribe(RCV + EXT_GRID_TOPIC)
-    client.subscribe(RCV + STORAGE_TOPIC)
-    for load in LOAD_TOPICS:
-        client.subscribe(RCV + load)
-
+    client.subscribe(SERVER_TOPIC)
     print("Connected to Broker")

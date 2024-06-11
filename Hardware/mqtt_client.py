@@ -108,9 +108,9 @@ class MClient:
         # TODO: check if this needs to be changed to the UI
         self.client.publish(SERVER_TOPIC, json.dumps({"target": Device.STORAGE.value, "payload": {"type": "soc", "value":soc}}))
     
-    def send_storage_error(self, error):
+    def send_storage_power(self, power):
         # TODO: check if this needs to be changed
-        self.client.publish(SERVER_TOPIC, json.dumps({"target": Device.STORAGE.value, "payload": {"type": "error", "value":error}}))
+        self.client.publish(SERVER_TOPIC, json.dumps({"target": Device.STORAGE.value, "payload": {"type": "power", "value":power}}))
     
     def send_pv_power(self, power):
         self.client.publish(SERVER_TOPIC, json.dumps({"target": Device.PV_ARRAY.value, "payload": power}))
