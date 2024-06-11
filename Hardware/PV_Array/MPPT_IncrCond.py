@@ -1,49 +1,3 @@
-# This Python script implements a control algorithm for optimizing power output using an Incremental Conductance Algorithm
-# for Maximum Power Point Tracking (MPPT). It utilizes various hardware components including ADC pins for voltage
-# measurement, PWM for output control, and the INA219 sensor for current sensing.
-
-# Hardware Setup:
-# - Initializes ADC pins (va_pin, vb_pin, and vpot_pin) for reading analog voltage values.
-# - Sets up I2C communication with the INA219 current sensor.
-# - Configures PWM on a specific pin with defined frequency and duty cycle limits.
-# - Declares global variables to track timer status, execution count, first run flag, and shunt resistance for current measurements.
-
-# Utility Functions:
-# - saturate(signal, upper, lower): Ensures that a given signal stays within specified upper and lower bounds.
-# - tick(t): Timer callback function that sets a flag (timer_elapsed) to indicate the timer has elapsed.
-
-# INA219 Class:
-# - Defines methods to configure the INA219 sensor, read shunt voltage, and bus voltage.
-# - Initializes the sensor with specific configurations.
-
-# Adaptive Delay Function:
-# - Adjusts the delay dynamically based on the difference in power between iterations to optimize the control loop's responsiveness.
-
-# Main Control Loop:
-# - Runs indefinitely, performing the following tasks:
-#   - Initializes INA219 and sets up a periodic timer for the first run.
-#   - Reads voltage values from ADC pins and shunt voltage from INA219.
-#   - Calculates current and output power.
-#   - Uses the Incremental Conductance Algorithm to adjust the PWM duty cycle, ensuring the system operates at maximum power point by comparing incremental and instantaneous conductance.
-#   - Ensures the PWM duty cycle stays within predefined limits using the saturate function.
-#   - Dynamically adjusts the loop delay based on power change.
-#   - Outputs debug information periodically, providing insights into power output, conductance, and duty cycle.
-
-# This setup and algorithm ensure efficient power optimization, dynamically adapting to changing conditions and maximizing the power extracted from the system.
-
-# Incremental Conductance Algorithm:
-# - Calculate the change in current (delta_iL) and voltage (delta_va) from previous values.
-# - Compute the current output power.
-# - Compare the incremental conductance (delta_iL / delta_va) to the instantaneous conductance (-iL / va):
-#   - If incremental conductance equals instantaneous conductance, the system is at MPP, no change needed.
-#   - If incremental conductance is greater than instantaneous conductance, the system is to the left of MPP:
-#     - Increase voltage (decrease duty cycle).
-#   - If incremental conductance is less than instantaneous conductance, the system is to the right of MPP:
-#     - Decrease voltage (increase duty cycle).
-# - Ensure the duty cycle stays within defined bounds.
-# - Update previous current and voltage values for the next iteration.
-
-
 from machine import Pin, I2C, ADC, PWM, Timer
 import utime
 
@@ -125,23 +79,52 @@ class ina219:
         ina_i2c.writeto_mem(self.address, self.REG_CALIBRATION, b'\x00\x00')
 
 
+# Implement a simple moving average filter
+class MovingAverageFilter:
+    def __init__(self, size=5):
+        self.size = size
+        self.values = []
+
+    def add_value(self, value):
+        if len(self.values) >= self.size:
+            self.values.pop(0)
+        self.values.append(value)
+
+    def get_average(self):
+        return sum(self.values) / len(self.values) if self.values else 0
+
 # Adjust the delay dynamically based on the power difference
 def adaptive_delay(prev_power, output_power, base_delay):
     power_diff = abs(output_power - prev_power)
-    if power_diff < 0.1:  # threshold for small changes in power
+    if power_diff < 0.25:  # threshold for small changes in power
         delay = min(base_delay * 2, 100)  # increase delay, with a maximum of 100 ms
     else:
         delay = max(base_delay // 2, 10)  # decrease delay, with a minimum of 10 ms
     return delay
 
+# Adjust the step size dynamically based on the power difference
+def adaptive_step_size(prev_power, output_power, step):
+    power_diff = abs(output_power - prev_power)
+    if power_diff < 0.5:  # threshold for small changes in power
+        step = max(step // 2, 10)  # decrease step size, with a minimum of 10
+    else:
+        step = min(step * 2, 1000)  # increase step size, with a maximum of 1000
+    return step
 
 # Variables for Incremental Conductance
 prev_va = 0
 prev_iL = 0
 current_duty = min_pwm
-step = 250
+step = 500
 
 prev_power = 0
+
+# Moving average filters
+va_filter = MovingAverageFilter(size=5)
+iL_filter = MovingAverageFilter(size=5)
+
+# Hysteresis band around MPP
+hysteresis_band = 0.1
 
 # Here we go, main function, always executes
 while True:
@@ -161,6 +144,12 @@ while True:
         Vshunt = ina.vshunt()
         iL = Vshunt / SHUNT_OHMS
 
+        # Apply moving average filter
+        va_filter.add_value(va)
+        iL_filter.add_value(iL)
+        va = va_filter.get_average()
+        iL = iL_filter.get_average()
+
         # Incremental Conductance Algorithm
         delta_iL = iL - prev_iL
         delta_va = va - prev_va
@@ -179,12 +168,15 @@ while True:
             if incremental_conductance == instantaneous_conductance:
                 # At MPP, no change needed
                 pass
-            elif incremental_conductance > instantaneous_conductance:
+            elif incremental_conductance > instantaneous_conductance + hysteresis_band:
                 # To the left of MPP, increase voltage (decrease duty cycle)
                 current_duty -= step
-            else:
+            elif incremental_conductance < instantaneous_conductance - hysteresis_band:
                 # To the right of MPP, decrease voltage (increase duty cycle)
                 current_duty += step
+        
+        # Adjust the step size
+        step = adaptive_step_size(prev_power, output_power, step)
         
         # Ensure the duty cycle stays within bounds
         current_duty = saturate(current_duty, max_pwm, min_pwm)
@@ -196,7 +188,7 @@ while True:
         prev_iL = iL
 
         # Adjust the delay dynamically
-        delay = adaptive_delay(prev_power, output_power, 25)
+        delay = adaptive_delay(prev_power, output_power, 10)
         utime.sleep_ms(delay)
 
         # Calculate output power
@@ -208,5 +200,6 @@ while True:
 
         # This set of prints executes every 100 loops by default and can be used to output debug or extra info over USB enable or disable lines as needed
         if count > 10:
-            print(f"Po = {output_power:.3f} W, IncrCond = {incremental_conductance:.5f} A/V, duty = {duty}")
+            print(f"Po = {output_power:.3f}")
             count = 0
+
