@@ -3,7 +3,10 @@ import ubinascii
 from wifi import init
 import json
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+=======
+>>>>>>> Stashed changes
 
 >>>>>>> Stashed changes
 # uncomment this line to import the helper functions
