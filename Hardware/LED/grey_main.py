@@ -37,6 +37,7 @@ def saturate(duty):
 
 while True:
     power_req = client.get_power_req()
+    power_req = min(power_req, 1)
     
     pwm_en.value(1)
 

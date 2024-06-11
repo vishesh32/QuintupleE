@@ -2,6 +2,10 @@ import machine
 import ubinascii
 from wifi import init
 import json
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 # uncomment this line to import the helper functions
 # and line 60
 # from helper_functions import get_desired_power
