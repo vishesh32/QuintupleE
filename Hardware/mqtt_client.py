@@ -82,7 +82,6 @@ class MClient:
 
     def check_msg(self):
         self.client.check_msg()
-
     
     def send_external_grid(self, import_p, export_p):
         self.client.publish(SERVER_TOPIC, json.dumps({"target": Device.EXTERNAL_GRID.value, "payload":{"import_power": import_p, "export_power": export_p}}))
@@ -112,4 +111,7 @@ class MClient:
     def send_storage_error(self, error):
         # TODO: check if this needs to be changed
         self.client.publish(SERVER_TOPIC, json.dumps({"target": Device.STORAGE.value, "payload": {"type": "error", "value":error}}))
+    
+    def send_pv_power(self, power):
+        self.client.publish(SERVER_TOPIC, json.dumps({"target": Device.PV_ARRAY.value, "payload": power}))
 

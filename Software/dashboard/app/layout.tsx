@@ -19,7 +19,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${karla.className} text-secondary`}>
-        <header><NavBar></NavBar></header>
+        <header className="w-full"><NavBar></NavBar></header>
         {children}
       </body>
     </html>

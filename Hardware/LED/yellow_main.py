@@ -1,8 +1,9 @@
 from machine import Pin, I2C, ADC, PWM
 from PID import PID
 from mqtt_client import MClient
+from mqtt_client import Device
 
-client = MClient()
+client = MClient(Device.LOADY.value)
 
 vret_pin = ADC(Pin(26))
 vout_pin = ADC(Pin(28))
