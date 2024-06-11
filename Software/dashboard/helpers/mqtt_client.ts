@@ -5,9 +5,12 @@ const picoTopic = "pico";
 const serverTopic = "server";
 const uiTopic = "ui";
 
+const prec = 2;
+
 class MQTTClient{
     private client: any;
     public pvArrayPower: number = 0;
+    public loadPowers: number[] = [0,0,0,0];
 
     constructor(address: string = '18.130.108.45', port: number = 9001){
         this.client = mqtt.connect(`ws://${address}:${port}`);
@@ -15,14 +18,30 @@ class MQTTClient{
         this.client.on('error', (err: any) => console.error(err));
         this.client.on('message', (topic: any, message: any) => {
             const msgObj = JSON.parse(message.toString());
-            console.log(`Received message on topic ${topic}: ${msgObj.toString()}`);
+            console.log(`Received message on topic ${topic}: ${message.toString()}`);
 
             // this is data that is to be sent and stored on the server
-            if(topic === serverTopic && "target" in msgObj && "payloads" in msgObj){
+            if(topic === serverTopic && "target" in msgObj && "payload" in msgObj){
                 // send data to server
                 switch(msgObj.target){
                     case Device.PV_ARRAY: {
-                        this.pvArrayPower = msgObj.payloads;
+                        this.pvArrayPower = msgObj.payload.toFixed(prec);
+                        break;
+                    }
+                    case Device.LOADR: {
+                        this.loadPowers[0] = msgObj.payload.toFixed(prec);
+                        break;
+                    }
+                    case Device.LOADB: {
+                        this.loadPowers[1] = msgObj.payload.toFixed(prec);
+                        break;
+                    }
+                    case Device.LOADY: {
+                        this.loadPowers[2] = msgObj.payload.toFixed(prec);
+                        break;
+                    }
+                    case Device.LOADK: {
+                        this.loadPowers[3] = msgObj.payload.toFixed(prec);
                         break;
                     }
                 }

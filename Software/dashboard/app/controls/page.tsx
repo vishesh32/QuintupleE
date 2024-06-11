@@ -23,6 +23,10 @@ export default function ManualControl() {
         setCurrentPV(mClient.current.pvArrayPower);
         if (mClient.current.pvArrayPower > peakPV) setPeakPV(mClient.current.pvArrayPower);
       }
+
+      if(mClient.current.loadPowers !== loadPowers){
+        setLoadPowers(mClient.current.loadPowers);
+      }
     }
   }, [mClient]);
 
@@ -103,7 +107,7 @@ export default function ManualControl() {
               Manual Load (LED <span className="text-[#3A9BDC]">Blue</span>)
             </p>
           }
-          middle={<p>3.6W</p>}
+          middle={<p>{loadPowers[1]}W</p>}
           bottom={<p>Average Power per 5s: -3.0W</p>}
         ></Card>
         <Card
@@ -113,7 +117,7 @@ export default function ManualControl() {
               Manual Load (LED <span className="text-[#808080]">Grey</span>)
             </p>
           }
-          middle={<p>3.6W</p>}
+          middle={<p>{loadPowers[3]}W</p>}
           bottom={<p>Average Power per 5s: -3.0W</p>}
         ></Card>
         <Card
@@ -123,7 +127,7 @@ export default function ManualControl() {
               Manual Load (LED <span className="text-[#FF0000]">Red</span>)
             </p>
           }
-          middle={<p>3.6W</p>}
+          middle={<p>{loadPowers[0]}W</p>}
           bottom={<p>Average Power per 5s: -3.0W</p>}
         ></Card>
         <Card
@@ -133,7 +137,7 @@ export default function ManualControl() {
               Manual Load (LED <span className="text-[#F6BE00]">Yellow</span>)
             </p>
           }
-          middle={<p>3.6W</p>}
+          middle={<p>{loadPowers[2]}W</p>}
           bottom={<p>Average Power per 5s: -3.0W</p>}
         ></Card>
       </div>

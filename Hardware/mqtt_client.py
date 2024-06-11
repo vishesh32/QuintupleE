@@ -2,8 +2,6 @@ import machine
 import ubinascii
 from wifi import init
 import json
-from enum import Enum
-
 # uncomment this line to import the helper functions
 # and line 60
 # from helper_functions import get_desired_power
