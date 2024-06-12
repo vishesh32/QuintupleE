@@ -1,5 +1,5 @@
 from pymongo import MongoClient
-
+from models import *
 
 class DBClient:
 
@@ -10,19 +10,17 @@ class DBClient:
         db = self.client["smartgrid"]
         self.day_db = db["days"]
         self.tick_db = db["ticks"]
-        self.comp_db = db["component-states"]
+        self.outcomes_db = db["outcomes"]
         self.algo_decs = db["algo-decisions"]
 
-    def insert_day(self, day):
+    def insert_day(self, day: Day):
         self.day_db.insert_one(day.model_dump())
 
-    def insert_tick(self, tick):
+    def insert_tick(self, tick: Tick):
         self.tick_db.insert_one(tick.model_dump())
 
-    def insert_component_states(self, day, tick, comp_vals):
-        self.comp_db.insert_many(
-            [
-                {"day": day.day, "tick": tick.tick, **val.model_dump()}
-                for val in comp_vals
-            ]
-        )
+    def insert_algo_decision(self, algo_decision: AlgoDecisions):
+        self.algo_decs.insert_one(algo_decision.model_dump())
+
+    def insert_tick_outcomes(self, tick_outcomes: TickOutcomes):
+        self.outcomes_db.insert_one(tick_outcomes.model_dump())

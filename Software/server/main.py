@@ -44,6 +44,7 @@ DB_LOG = False
 
 setpoint = 0.3
 prev_tick = None
+prev_day = None
 
 
 if __name__ == "__main__":
@@ -82,21 +83,33 @@ if __name__ == "__main__":
             #     print("-" * 20)
             #     print()
 
-        comp_vals = list(mqtt_client.db_data.values())
-
         # add data to the database for each new day and algorithms decsions
-        if DB_LOG and len(comp_vals) > 0:
-            if prev_tick == None or tick.day != prev_tick.day:
-                # day_db.insert_one(day.model_dump())
+        if DB_LOG:
+
+            # only write the previous tick data
+            if prev_tick != None:
+                tick_outcomes = mqtt_client.get_outcome_model(tick.day, tick.tick)
+                # TODO: get data for algo decisions
+
+                if tick_outcomes != None:
+                    db_client.insert_tick_outcomes(tick_outcomes)
+                    db_client.insert_tick(prev_tick)
+
+                    # db_client.insert_algo_decision()
+                else:
+                    print("could not write to database, tickoutcomes is empty")
+            
+            # write data for a new day
+            if prev_tick != None and prev_tick.tick == 0:
+                db_client.insert_day(prev_day)
+            elif prev_day == None:
                 db_client.insert_day(day)
 
-            db_client.insert_tick(tick)
-            db_client.insert_component_states(day, tick, comp_vals)
-            print("Written to db")
-            # TODO: write the algorithms decisions to the db
+            # reset the data stored from previous tick
+            db_client.reset_db_data()
 
-        # prev_tick = tick
-        # prev_day = day
+        prev_tick = tick
+        prev_day = day
 
         # Finds the exact start of the next tick
         delay = time.time() - start
