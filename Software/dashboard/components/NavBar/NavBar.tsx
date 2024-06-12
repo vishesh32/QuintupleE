@@ -8,10 +8,10 @@ export default function NavBar(){
     return (
         <nav className='p-6 flex flex-row items-center justify-start animate-ttb border-b-[1px]'>
             {/* <Image className='rounded-full p-1 ml-7' src="/Logo.png" alt="Quintuple E" width={72} height={71}></Image> */}
-            <h1 className='text-3xl text-nowrap font-bold ml-4 mr-10 text-title'>Quintuple E</h1>
+            <h1 className='text-3xl text-nowrap font-bold ml-4 mr-10'>Quintuple E</h1>
             <div className='flex justify-start text-center w-full'>
-                <Link className={navLinkStyle} href="/home">Home</Link>
-                <Link className={navLinkStyle} href="/historical">Historical</Link>
+                <Link className={navLinkStyle} href="/history">Historical</Link>
+                <Link className={navLinkStyle} href="/management">Management</Link>
                 <Link className={navLinkStyle} href="/controls">Controls</Link>
                 <Link className={navLinkStyle} href="/settings">Settings</Link>
             </div>

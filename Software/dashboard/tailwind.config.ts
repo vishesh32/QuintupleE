@@ -10,10 +10,8 @@ const config: Config = {
     extend: {
       colors: {
         "background": "#0F0E17",
-        "title": "#F25F4C",
         "primary": "#FFFFFF",
         "secondary": "#000000",
-        "highlight": "F25F4C",
       },
       boxShadow: {
         "card": "0px 4px 12px 0px rgba(0, 0, 0, 0.25);",
