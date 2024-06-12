@@ -202,4 +202,3 @@ while True:
         if count > 10:
             print(f"Po = {output_power:.3f}")
             count = 0
-
