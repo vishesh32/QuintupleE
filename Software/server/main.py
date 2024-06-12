@@ -77,7 +77,7 @@ if __name__ == "__main__":
             actions["allocations"] = [a * 0.1 for a in actions["allocations"]]
 
             daily_costs.append(cost)
-            print_postaction(actions, tick, cost)
+            # print_postaction(actions, tick, cost)
 
             # if tick.tick == 59:
             #     costs.append(cost_per_day)

@@ -94,6 +94,10 @@ class MQTTClient{
         this.client.publish(picoTopic, JSON.stringify({"target": Device.STORAGE, "payload": val}));
         console.log("here")
     }
+
+    send_load_power(val: number, load: string){
+        this.client.publish(picoTopic, JSON.stringify({"target": load, "payload": val}));
+    }
 }
 
 // Devices, taken from the MQTT pico client
@@ -106,5 +110,7 @@ enum Device {
     LOADB="loadB",
     LOADK="loadK"
 }
+
+
 
 export { MQTTClient, Device }

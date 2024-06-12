@@ -75,19 +75,27 @@ class MClient:
         elif data["target"] == Device.STORAGE:
             if data["payload"]["type"] == "soc":
                 soc = data["payload"]["value"]
-                self.db_data["soc"] = soc
+                # self.db_data["soc"] = soc
+                self.add_to_dict("soc", soc)
             elif data["payload"]["type"] == "power":
                 storage_power = data["payload"]["value"]
-                self.db_data["storage_power"] += [storage_power]
+                # self.db_data["storage_power"] += [storage_power]
+                self.add_to_dict("storage_power", storage_power)
 
         else:
             # then use target to check what type of load it is
             # target is storing it as a string
             load = data["target"]
             load_power = data["payload"]
-            self.db_data[load] += [load_power]
+            self.add_to_dict(load, load_power)
         
         print(self.db_data)
+
+    def add_to_dict(self, key, value):
+        if key in self.db_data:
+            self.db_data[key] += [value]
+        else:
+            self.db_data[key] = [value]
 
     def get_outcome_model(self, day, tick):
         try:

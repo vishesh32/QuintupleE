@@ -5,6 +5,8 @@ import Card from "@/components/Card/Card";
 import { MQTTClient } from "@/helpers/mqtt_client";
 import Graph from '../../components/Graph/Graph';
 
+const inputClass = "ml-auto font-normal text-2xl outline-none border-2 rounded-md text-[#828282] pl-2 pr-2";
+
 export default function ManualControl() {
   const [inIrr, setInIrr] = useState<string>("");
   const [inStoragePower, setInStoragePower] = useState<string>("");
@@ -84,7 +86,7 @@ export default function ManualControl() {
                 }}
                 value={inStoragePower}
                 onChange={(e) => setInStoragePower(e.target.value)}
-                className="ml-auto font-normal text-2xl outline-none border-2 rounded-md text-[#828282] pl-2 pr-2"
+                className={inputClass}
                 type="text"
               />
             </>
@@ -117,7 +119,10 @@ export default function ManualControl() {
               Manual Load (LED <span className="text-[#3A9BDC]">Blue</span>)
             </p>
           }
-          middle={<p>{loadPowers[1]}W</p>}
+          middle={<>
+          <p>{loadPowers[1]}W</p>
+          <input className={inputClass} placeholder="Send Power To Load" type="text" />
+          </>}
           bottom={<p>Average Power per 5s: -3.0W</p>}
         ></Card>
         <Card
@@ -127,7 +132,10 @@ export default function ManualControl() {
               Manual Load (LED <span className="text-[#808080]">Grey</span>)
             </p>
           }
-          middle={<p>{loadPowers[3]}W</p>}
+          middle={<>
+          <p>{loadPowers[3]}W</p>
+          <input className={inputClass} placeholder="Send Power To Load" type="text" />
+          </>}
           bottom={<p>Average Power per 5s: -3.0W</p>}
         ></Card>
         <Card
@@ -137,7 +145,10 @@ export default function ManualControl() {
               Manual Load (LED <span className="text-[#FF0000]">Red</span>)
             </p>
           }
-          middle={<p>{loadPowers[0]}W</p>}
+          middle={<>
+          <p>{loadPowers[0]}W</p>
+          <input className={inputClass} placeholder="Send Power To Load" type="text" />
+          </>}
           bottom={<p>Average Power per 5s: -3.0W</p>}
         ></Card>
         <Card
@@ -147,7 +158,10 @@ export default function ManualControl() {
               Manual Load (LED <span className="text-[#F6BE00]">Yellow</span>)
             </p>
           }
-          middle={<p>{loadPowers[2]}W</p>}
+          middle={<>
+          <p>{loadPowers[2]}W</p>
+          <input className={inputClass} placeholder="Send Power To Load" type="text" />
+          </>}
           bottom={<p>Average Power per 5s: -3.0W</p>}
         ></Card>
 
