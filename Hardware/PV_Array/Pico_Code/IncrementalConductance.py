@@ -1,8 +1,5 @@
 from machine import Pin, I2C, ADC, PWM, Timer
 import utime
-from mqtt_client import MClient
-
-client = MClient()
 
 # Set up some pin allocations for the Analogues and switches
 va_pin = ADC(Pin(28))
@@ -202,8 +199,6 @@ while True:
         timer_elapsed = 0
 
         # This set of prints executes every 100 loops by default and can be used to output debug or extra info over USB enable or disable lines as needed
-        if count > 30:
+        if count > 10:
             print(f"Po = {output_power:.3f}")
             count = 0
-            client.send_pv_power(output_power)
-
