@@ -202,11 +202,7 @@ while True:
         timer_elapsed = 0
 
         # This set of prints executes every 100 loops by default and can be used to output debug or extra info over USB enable or disable lines as needed
-<<<<<<< Updated upstream
         if count > 30:
-=======
-        if count > 10:
->>>>>>> Stashed changes
             print(f"Po = {output_power:.3f}")
             count = 0
             client.send_pv_power(output_power)
