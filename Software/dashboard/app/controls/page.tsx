@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Card from "@/components/Card/Card";
-import { MQTTClient } from "@/helpers/mqtt_client";
+import { MQTTClient, Device } from "@/helpers/mqtt_client";
 import Graph from '../../components/Graph/Graph';
 
 const inputClass = "ml-auto font-normal text-2xl outline-none border-2 rounded-md text-[#828282] pl-2 pr-2";
@@ -15,16 +15,18 @@ export default function ManualControl() {
   const [loadPowers, setLoadPowers] = useState<number[]>([0,0,0,0]);
   const [importPower, setImportPower] = useState<number>(0);
   const [exportPower, setExportPower] = useState<number>(0);
+  const [soc, setSoc] = useState<number>(0)
+  const [socPower, setSocPower] = useState<number>(0)
 
   const mClient = useRef<MQTTClient | undefined>(undefined);
 
   useEffect(() => {
-    if (mClient.current === undefined) mClient.current = new MQTTClient(setCurrentPV, setLoadPowers, setImportPower, setExportPower);
+    if (mClient.current === undefined) mClient.current = new MQTTClient(setCurrentPV, setLoadPowers, setImportPower, setExportPower, setSoc, setSocPower);
   }, []);
 
 
   useEffect(() => {
-    console.log("running effect cb");
+    // console.log("running effect cb");
     if (currentPV > peakPV) setPeakPV(currentPV);
   }, [currentPV, peakPV])
 
@@ -41,7 +43,7 @@ export default function ManualControl() {
                 placeholder="Enter a value"
                 onKeyDown={(e: any) => {
                   if (e.key === "Enter") {
-                    console.log(parseFloat(inIrr));
+                    // console.log(parseFloat(inIrr));
                     mClient.current?.send_irradiance(parseFloat(inIrr));
                   }
                 }}
@@ -52,21 +54,21 @@ export default function ManualControl() {
               />
             </>
           }
-          bottom={<p>Active</p>}
+          bottom={<p>PV Array</p>}
         ></Card>
 
         <Card
           className=""
           top={<p>Peak PV Power</p>}
           middle={<p>{peakPV}W</p>}
-          bottom={<p>Average Power per 5s: -3.0W</p>}
+          bottom={<p>PV Array</p>}
         ></Card>
 
         <Card
           className=""
           top={<p>Current PV Power</p>}
           middle={<p>{currentPV}W</p>}
-          bottom={<p>Average Power per 5s: -3.0W</p>}
+          bottom={<p>PV Array</p>}
         ></Card>
 
           {/* Storage Input */}
@@ -80,7 +82,7 @@ export default function ManualControl() {
                 placeholder="Enter a value"
                 onKeyDown={(e: any) => {
                   if (e.key === "Enter") {
-                    console.log(parseFloat(inStoragePower));
+                    // console.log(parseFloat(inStoragePower));
                     mClient.current?.send_storage_power(parseFloat(inStoragePower));
                   }
                 }}
@@ -91,21 +93,34 @@ export default function ManualControl() {
               />
             </>
           }
-          bottom={<p>Active</p>}
+          bottom={<p>Storage</p>}
         ></Card>
 
-        {/* Storage Outputs */}
         <Card
-        className=""
-        top={<p>Import Power</p>}
-        middle={<p>{importPower}W</p>}
-        bottom={<p>Average Power</p>}
+          className="w-[260px]"
+          top={<p>SOC Power</p>}
+          middle={<p>{socPower}W</p>}
+          bottom={<p>Storage</p>}
         />
         <Card
-        className=""
+          className="w-[260px]"
+          top={<p>SOC</p>}
+          middle={<p>{soc}%</p>}
+          bottom={<p>Storage</p>}
+        />
+
+        {/* External Grid Outputs */}
+        <Card
+        className="w-[260px]"
+        top={<p>Import Power</p>}
+        middle={<p>{importPower}W</p>}
+        bottom={<p>Storage</p>}
+        />
+        <Card
+        className="w-[260px]"
         top={<p>Export Power</p>}
         middle={<p>{exportPower}W</p>}
-        bottom={<p>Average Power</p>}
+        bottom={<p>External Grid</p>}
         />
 
       </div>
@@ -116,14 +131,41 @@ export default function ManualControl() {
           className=""
           top={
             <p>
+              Manual Load (LED <span className="text-[#FF0000]">Red</span>)
+            </p>
+          }
+          middle={<>
+          <p>{loadPowers[0]}W</p>
+          <input onKeyDown={
+            (e: any)=>{
+              if(e.key === "Enter"){
+                // console.log(e.target.value);
+                mClient.current?.send_load_power(parseFloat(e.target.value), Device.LOADR);
+              }
+            }
+          } className={inputClass} placeholder="Send Power To Load" type="text" />
+          </>}
+          bottom={<p>Instant Load</p>}
+        ></Card>
+        <Card
+          className=""
+          top={
+            <p>
               Manual Load (LED <span className="text-[#3A9BDC]">Blue</span>)
             </p>
           }
           middle={<>
           <p>{loadPowers[1]}W</p>
-          <input className={inputClass} placeholder="Send Power To Load" type="text" />
+          <input onKeyDown={
+            (e: any)=>{
+              if(e.key === "Enter"){
+                // console.log(e.target.value);
+                mClient.current?.send_load_power(parseFloat(e.target.value), Device.LOADB);
+              }
+            }
+          } className={inputClass} placeholder="Send Power To Load" type="text" />
           </>}
-          bottom={<p>Average Power per 5s: -3.0W</p>}
+          bottom={<p>Deferrable Load</p>}
         ></Card>
         <Card
           className=""
@@ -134,22 +176,16 @@ export default function ManualControl() {
           }
           middle={<>
           <p>{loadPowers[3]}W</p>
-          <input className={inputClass} placeholder="Send Power To Load" type="text" />
+          <input onKeyDown={
+            (e: any)=>{
+              if(e.key === "Enter"){
+                // console.log(e.target.value);
+                mClient.current?.send_load_power(parseFloat(e.target.value), Device.LOADK);
+              }
+            }
+          } className={inputClass} placeholder="Send Power To Load" type="text" />
           </>}
-          bottom={<p>Average Power per 5s: -3.0W</p>}
-        ></Card>
-        <Card
-          className=""
-          top={
-            <p>
-              Manual Load (LED <span className="text-[#FF0000]">Red</span>)
-            </p>
-          }
-          middle={<>
-          <p>{loadPowers[0]}W</p>
-          <input className={inputClass} placeholder="Send Power To Load" type="text" />
-          </>}
-          bottom={<p>Average Power per 5s: -3.0W</p>}
+          bottom={<p>Deferrable Load</p>}
         ></Card>
         <Card
           className=""
@@ -160,18 +196,17 @@ export default function ManualControl() {
           }
           middle={<>
           <p>{loadPowers[2]}W</p>
-          <input className={inputClass} placeholder="Send Power To Load" type="text" />
+          <input onKeyDown={
+            (e: any)=>{
+              if(e.key === "Enter"){
+                // console.log(e.target.value);
+                mClient.current?.send_load_power(parseFloat(e.target.value), Device.LOADY);
+              }
+            }
+          } className={inputClass} placeholder="Send Power To Load" type="text" />
           </>}
-          bottom={<p>Average Power per 5s: -3.0W</p>}
-        ></Card>
-
-        <Card
-        className=""
-        top={<p>SOC Power</p>}
-        middle={<p>{exportPower}W</p>}
-        bottom={<p>Average Power</p>}
-        />
-        
+          bottom={<p>Deferrable Load</p>}
+        ></Card>       
 
       </div>
     </main>

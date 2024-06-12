@@ -76,6 +76,8 @@ if __name__ == "__main__":
             actions["release_store"] = actions["release_store"] * 0.1
             actions["allocations"] = [a * 0.1 for a in actions["allocations"]]
 
+            print(f"\n\n\nsending this to storage {actions['release_store']}\n\n\n")
+
             daily_costs.append(cost)
             # print_postaction(actions, tick, cost)
 
@@ -112,6 +114,10 @@ if __name__ == "__main__":
                 tick_outcomes = mqtt_client.get_outcome_model(tick.day, tick.tick)
                 # TODO: get data for algo decisions
                 algo_data = AlgoDecisions(day=tick.day, tick=tick.tick, power_import=actions["import_export"], power_store=actions["release_store"], deferables_supplied=actions["allocations"])
+
+                # calc cost
+
+                # change cost in tick_outcomes
 
                 if tick_outcomes != None:
                     db_client.insert_tick_outcomes(tick_outcomes)

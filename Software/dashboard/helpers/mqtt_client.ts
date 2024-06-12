@@ -12,7 +12,7 @@ class MQTTClient{
     public pvArrayPower: number = 0;
     public loadPowers: number[] = [0,0,0,0];
 
-    constructor(setCurrentPV: any, setLoadPowers: any, setImportPower: any, setExportPower: any, address: string = '18.130.108.45', port: number = 9001){
+    constructor(setCurrentPV: any, setLoadPowers: any, setImportPower: any, setExportPower: any, setSoc: any, setSocPower: any, address: string = '35.178.119.19', port: number = 9001){
         this.client = mqtt.connect(`ws://${address}:${port}`);
         this.client.on('connect', () => console.log("Connected to MQTT Broker"));
         this.client.on('error', (err: any) => console.error(err));
@@ -68,10 +68,16 @@ class MQTTClient{
                         })
                         break;
                     }
-                    case Device.STORAGE: {
+                    case Device.EXTERNAL_GRID: {
                         if(msgObj.payload.import_power) setImportPower(msgObj.payload.import_power.toFixed(prec));
-                        else setExportPower(msgObj.payload.export_power.toFixed(prec));
+                        else if(msgObj.payload.export_power) setExportPower(msgObj.payload.export_power.toFixed(prec));
                         // console.log(msgObj.payload.import_power)
+                        break;
+                    }
+                    case Device.STORAGE: {
+                        // console.log(msgObj.payload)
+                        if(msgObj.payload.type == "soc") setSoc(msgObj.payload.value.toFixed(prec));
+                        else setSocPower(msgObj.payload.value.toFixed(prec));
                         break;
                     }
                 }
@@ -92,7 +98,7 @@ class MQTTClient{
 
     send_storage_power(val: number){
         this.client.publish(picoTopic, JSON.stringify({"target": Device.STORAGE, "payload": val}));
-        console.log("here")
+        // console.log("here")
     }
 
     send_load_power(val: number, load: string){

@@ -50,46 +50,52 @@ class MClient:
         self.db_data = {}
 
     def handle_msg(self, client, userdata, message):
-        msg_str = message.payload.decode()
-        topic = message.topic
-        print(f"Message received: {msg_str} on topic {topic}")
+        try:
+            msg_str = message.payload.decode()
+            topic = message.topic
+            # print(f"Message received: {msg_str} on topic {topic}")
 
-        data = json.loads(msg_str)
+            data = json.loads(msg_str)
 
-        if "target" not in data or "payload" not in data:
-            raise Exception("Invalid message format")
-        
-        elif data["target"] == Device.EXTERNAL_GRID:
-            import_power = data["payload"]["import_power"] 
-            export_power = data["payload"]["export_power"]
-            if import_power == None:
-                self.db_data["export_power"] += [export_power]
+            if "target" not in data or "payload" not in data:
+                raise Exception("Invalid message format")
+            
+            elif data["target"] == Device.EXTERNAL_GRID:
+                import_power = data["payload"]["import_power"] 
+                export_power = data["payload"]["export_power"]
+                if import_power == None:
+                    # self.db_data["export_power"] += [export_power]
+                    self.add_to_dict("export_power", export_power)
+                else:
+                    # self.db_data["import_power"] += [import_power]
+                    self.add_to_dict("import_power", import_power)
+
+
+            elif data["target"] == Device.PV_ARRAY:
+                pv_power = data["payload"]
+                # self.db_data["pv_power"] += [pv_power]
+                self.add_to_dict("pv_power", pv_power)
+            
+            elif data["target"] == Device.STORAGE:
+                if data["payload"]["type"] == "soc":
+                    soc = data["payload"]["value"]
+                    # self.db_data["soc"] = soc
+                    self.add_to_dict("soc", soc)
+                elif data["payload"]["type"] == "power":
+                    storage_power = data["payload"]["value"]
+                    # self.db_data["storage_power"] += [storage_power]
+                    self.add_to_dict("storage_power", storage_power)
+
             else:
-                self.db_data["import_power"] += [import_power]
-
-
-        elif data["target"] == Device.PV_ARRAY:
-            pv_power = data["payload"]
-            self.db_data["pv_power"] += [pv_power]
-        
-        elif data["target"] == Device.STORAGE:
-            if data["payload"]["type"] == "soc":
-                soc = data["payload"]["value"]
-                # self.db_data["soc"] = soc
-                self.add_to_dict("soc", soc)
-            elif data["payload"]["type"] == "power":
-                storage_power = data["payload"]["value"]
-                # self.db_data["storage_power"] += [storage_power]
-                self.add_to_dict("storage_power", storage_power)
-
-        else:
-            # then use target to check what type of load it is
-            # target is storing it as a string
-            load = data["target"]
-            load_power = data["payload"]
-            self.add_to_dict(load, load_power)
-        
-        print(self.db_data)
+                # then use target to check what type of load it is
+                # target is storing it as a string
+                load = data["target"]
+                load_power = data["payload"]
+                self.add_to_dict(load, load_power)
+            
+            # print(self.db_data)
+        except Exception as e:
+            print(f"Error message: {e}")
 
     def add_to_dict(self, key, value):
         if key in self.db_data:

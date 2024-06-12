@@ -2,10 +2,6 @@ import machine
 import ubinascii
 from wifi import init
 import json
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
 # uncomment this line to import the helper functions
 # and line 60
 # from helper_functions import get_desired_power
@@ -17,7 +13,7 @@ UI_TOPIC = "ui"
 
 # MQTT broker settings
 MQTT_CLIENT_ID = ubinascii.hexlify(machine.unique_id())
-MQTT_BROKER = "18.130.108.45"
+MQTT_BROKER = "35.178.119.19"
 MQTT_BROKER_PORT = 1883
 
 
@@ -71,6 +67,8 @@ class MClient:
             elif data["target"] == DEVICE.STORAGE:
                 self.desired_power = data["payload"]
                 # print(f"desired_power: {self.desired_power}")
+
+            # this is for all loads
             elif data["target"] == self.device:
                 self.power_req = data["payload"]
                 print(f"power_req: {self.power_req}")
@@ -91,8 +89,8 @@ class MClient:
     def send_load_power(self, power):
         self.client.publish(SERVER_TOPIC, json.dumps({"target": self.device, "payload": power}))
 
-    def send_shunt_current(self, current):
-        self.client.publish(UI_TOPIC, json.dumps({"target": self.device, "payload": current}))
+    # def send_shunt_current(self, current):
+    #     self.client.publish(UI_TOPIC, json.dumps({"target": self.device, "payload": current}))
 
     def get_power_req(self):
         self.check_msg()
@@ -106,13 +104,16 @@ class MClient:
         self.check_msg()
         return self.irradiance
 
+    # percentage of the capacitor
     def send_soc(self, soc):
         # TODO: check if this needs to be changed to the UI
         self.client.publish(SERVER_TOPIC, json.dumps({"target": DEVICE.STORAGE, "payload": {"type": "soc", "value":soc}}))
     
+    # the power used to charge the capacitor
     def send_storage_power(self, power):
         self.client.publish(SERVER_TOPIC, json.dumps({"target": DEVICE.STORAGE, "payload": {"type": "power", "value":power}}))
     
+    # 
     def send_pv_power(self, power):
         self.client.publish(SERVER_TOPIC, json.dumps({"target": DEVICE.PV_ARRAY, "payload": power}))
 
