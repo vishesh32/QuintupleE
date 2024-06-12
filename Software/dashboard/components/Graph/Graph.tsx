@@ -22,13 +22,13 @@ export default function Graph({
   data,
   handleRemoveGraph,
   graphFullScreen,
-  setGraphFullScreen,
+  // setGraphFullScreen,
   animation = false,
 }: {
   data: GraphData;
   handleRemoveGraph: ((data: GraphData) => void) | null;
   graphFullScreen: GraphData | null;
-  setGraphFullScreen: React.Dispatch<React.SetStateAction<GraphData | null>>;
+  // setGraphFullScreen: React.Dispatch<React.SetStateAction<GraphData | null>>;
   animation: boolean;
 }) {
 
@@ -74,9 +74,9 @@ export default function Graph({
     setRightZoom(undefined);
   };
 
-  const makeBigger = () => setGraphFullScreen(data);
+  // const makeBigger = () => setGraphFullScreen(data);
 
-  const makeSmaller = () => setGraphFullScreen(null);
+  // const makeSmaller = () => setGraphFullScreen(null);
 
   return (
     <div className="w-full h-full bg-blue flex flex-col justify-center items-center">
@@ -101,7 +101,7 @@ export default function Graph({
 
         <button
           className="bg-primary p-2 rounded-full ml-[10px] mr-[50px]"
-          onClick={graphFullScreen === null ? makeBigger : makeSmaller}
+          // onClick={graphFullScreen === null ? makeBigger : makeSmaller}
         >
           {graphFullScreen === null ? (
             <ArrowsPointingOutIcon className="size-6 text-white" />

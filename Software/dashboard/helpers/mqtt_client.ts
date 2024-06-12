@@ -12,36 +12,66 @@ class MQTTClient{
     public pvArrayPower: number = 0;
     public loadPowers: number[] = [0,0,0,0];
 
-    constructor(address: string = '18.130.108.45', port: number = 9001){
+    constructor(setCurrentPV: any, setLoadPowers: any, setImportPower: any, setExportPower: any, address: string = '18.130.108.45', port: number = 9001){
         this.client = mqtt.connect(`ws://${address}:${port}`);
         this.client.on('connect', () => console.log("Connected to MQTT Broker"));
         this.client.on('error', (err: any) => console.error(err));
         this.client.on('message', (topic: any, message: any) => {
-            const msgObj = JSON.parse(message.toString());
             console.log(`Received message on topic ${topic}: ${message.toString()}`);
+            const msgObj = JSON.parse(message.toString());
 
             // this is data that is to be sent and stored on the server
             if(topic === serverTopic && "target" in msgObj && "payload" in msgObj){
+                // console.log("Received data from server")
                 // send data to server
                 switch(msgObj.target){
                     case Device.PV_ARRAY: {
-                        this.pvArrayPower = msgObj.payload.toFixed(prec);
+                        // console.log("PV Array Power: ", msgObj.payload);
+                        // this.pvArrayPower = msgObj.payload.toFixed(prec);
+                        setCurrentPV(msgObj.payload.toFixed(prec));
+                        // console.log("PV Array Power: ", this.pvArrayPower);
                         break;
                     }
                     case Device.LOADR: {
-                        this.loadPowers[0] = msgObj.payload.toFixed(prec);
+                        // this.loadPowers[0] = msgObj.payload.toFixed(prec);
+                        setLoadPowers((prev: number[])=>{
+                            const old = [...prev];
+                            old[0] = msgObj.payload.toFixed(prec);
+                            return old;
+                        })
                         break;
                     }
                     case Device.LOADB: {
-                        this.loadPowers[1] = msgObj.payload.toFixed(prec);
+                        // this.loadPowers[1] = msgObj.payload.toFixed(prec);
+                        setLoadPowers((prev: number[])=>{
+                            const old = [...prev];
+                            old[1] = msgObj.payload.toFixed(prec);
+                            return old;
+                        })
                         break;
                     }
                     case Device.LOADY: {
-                        this.loadPowers[2] = msgObj.payload.toFixed(prec);
+                        // this.loadPowers[2] = msgObj.payload.toFixed(prec);
+                        setLoadPowers((prev: number[])=>{
+                            const old = [...prev];
+                            old[2] = msgObj.payload.toFixed(prec);
+                            return old;
+                        })
                         break;
                     }
                     case Device.LOADK: {
-                        this.loadPowers[3] = msgObj.payload.toFixed(prec);
+                        // this.loadPowers[3] = msgObj.payload.toFixed(prec);
+                        setLoadPowers((prev: number[])=>{
+                            const old = [...prev];
+                            old[3] = msgObj.payload.toFixed(prec);
+                            return old;
+                        })
+                        break;
+                    }
+                    case Device.STORAGE: {
+                        if(msgObj.payload.import_power) setImportPower(msgObj.payload.import_power.toFixed(prec));
+                        else setExportPower(msgObj.payload.export_power.toFixed(prec));
+                        // console.log(msgObj.payload.import_power)
                         break;
                     }
                 }

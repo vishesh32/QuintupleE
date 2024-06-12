@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Card from "@/components/Card/Card";
 import { MQTTClient } from "@/helpers/mqtt_client";
+import Graph from '../../components/Graph/Graph';
 
 export default function ManualControl() {
   const [inIrr, setInIrr] = useState<string>("");
@@ -10,25 +11,20 @@ export default function ManualControl() {
   const [peakPV, setPeakPV] = useState<number>(0);
   const [currentPV, setCurrentPV] = useState<number>(0);
   const [loadPowers, setLoadPowers] = useState<number[]>([0,0,0,0]);
+  const [importPower, setImportPower] = useState<number>(0);
+  const [exportPower, setExportPower] = useState<number>(0);
 
   const mClient = useRef<MQTTClient | undefined>(undefined);
 
   useEffect(() => {
-    if (mClient.current === undefined) mClient.current = new MQTTClient();
+    if (mClient.current === undefined) mClient.current = new MQTTClient(setCurrentPV, setLoadPowers, setImportPower, setExportPower);
   }, []);
 
-  useEffect(() => {
-    if (mClient.current !== undefined) {
-      if (mClient.current.pvArrayPower !== currentPV) {
-        setCurrentPV(mClient.current.pvArrayPower);
-        if (mClient.current.pvArrayPower > peakPV) setPeakPV(mClient.current.pvArrayPower);
-      }
 
-      if(mClient.current.loadPowers !== loadPowers){
-        setLoadPowers(mClient.current.loadPowers);
-      }
-    }
-  }, [mClient]);
+  useEffect(() => {
+    console.log("running effect cb");
+    if (currentPV > peakPV) setPeakPV(currentPV);
+  }, [currentPV, peakPV])
 
   return (
     <main className="p-5 flex ml-12 mr-12 h-full gap-5">
@@ -96,6 +92,20 @@ export default function ManualControl() {
           bottom={<p>Active</p>}
         ></Card>
 
+        {/* Storage Outputs */}
+        <Card
+        className=""
+        top={<p>Import Power</p>}
+        middle={<p>{importPower}W</p>}
+        bottom={<p>Average Power</p>}
+        />
+        <Card
+        className=""
+        top={<p>Export Power</p>}
+        middle={<p>{exportPower}W</p>}
+        bottom={<p>Average Power</p>}
+        />
+
       </div>
 
       <div className="flex-1 flex flex-row gap-2 flex-wrap justify-center">
@@ -140,6 +150,15 @@ export default function ManualControl() {
           middle={<p>{loadPowers[2]}W</p>}
           bottom={<p>Average Power per 5s: -3.0W</p>}
         ></Card>
+
+        <Card
+        className=""
+        top={<p>SOC Power</p>}
+        middle={<p>{exportPower}W</p>}
+        bottom={<p>Average Power</p>}
+        />
+        
+
       </div>
     </main>
   );

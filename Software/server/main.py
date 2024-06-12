@@ -15,10 +15,11 @@ from optimisation.models import Day, Tick
 import time
 
 from pymongo import MongoClient
-from mqtt_client import MClient
+from mqtt_client import MClient, Device
 from external.parallel_get import get_day_and_tick
 from external.sync import sync_with_server
 from utils import print_preaction, print_postaction
+from models import AlgoDecisions
 
 mqtt_client: MClient | None = None
 
@@ -28,7 +29,7 @@ WAIT = 4.5
 
 # ALGORITHM SETUP
 filename = (
-    "server/optimisation/checkpoints/06_e5000_r50_am2_rm0_im10_sta20_abs1_tre1.pth"
+    "optimisation/checkpoints/06_e5000_r50_am2_rm0_im10_sta20_abs1_tre1.pth"
 )
 policy_network, min, min_epoch = load_policy_network_checkpoint(filename)
 
@@ -40,7 +41,7 @@ overall_cost = 0
 # CONTROL VARIABLES
 RUN_BROKER = True
 RUN_ALGO = True
-DB_LOG = False
+DB_LOG = True
 
 setpoint = 0.3
 prev_tick = None
@@ -71,6 +72,10 @@ if __name__ == "__main__":
         if RUN_ALGO:
             print_preaction(tick, env)
             cost, actions = predict(policy_network, env, tick, history)
+            actions["import_export"] = actions["import_export"] * 0.1
+            actions["release_store"] = actions["release_store"] * 0.1
+            actions["allocations"] = [a * 0.1 for a in actions["allocations"]]
+
             daily_costs.append(cost)
             print_postaction(actions, tick, cost)
 
@@ -83,6 +88,22 @@ if __name__ == "__main__":
             #     print("-" * 20)
             #     print()
 
+        # send data to picos
+        if RUN_BROKER:
+            # divide by to convert to power
+            mqtt_client.send_storage_power(-1*actions["release_store"]/5)
+
+            # sending the irradiance
+            mqtt_client.send_sun_data(tick.sun)
+
+            # Red is instant deferrable
+            mqtt_client.send_load_power(Device.LOADR, tick.demand/4)
+
+            # 3 extra defferables are grey, yellow, blue
+            mqtt_client.send_load_power(Device.LOADK, actions["allocations"][1]/5)
+            mqtt_client.send_load_power(Device.LOADY, actions["allocations"][2]/5)
+            mqtt_client.send_load_power(Device.LOADB, actions["allocations"][0]/5)
+
         # add data to the database for each new day and algorithms decsions
         if DB_LOG:
 
@@ -90,12 +111,12 @@ if __name__ == "__main__":
             if prev_tick != None:
                 tick_outcomes = mqtt_client.get_outcome_model(tick.day, tick.tick)
                 # TODO: get data for algo decisions
+                algo_data = AlgoDecisions(day=tick.day, tick=tick.tick, power_import=actions["import_export"], power_store=actions["release_store"], deferables_supplied=actions["allocations"])
 
                 if tick_outcomes != None:
                     db_client.insert_tick_outcomes(tick_outcomes)
                     db_client.insert_tick(prev_tick)
-
-                    # db_client.insert_algo_decision()
+                    db_client.insert_algo_decision(algo_data)
                 else:
                     print("could not write to database, tickoutcomes is empty")
             
@@ -106,7 +127,7 @@ if __name__ == "__main__":
                 db_client.insert_day(day)
 
             # reset the data stored from previous tick
-            db_client.reset_db_data()
+            mqtt_client.reset_db_data()
 
         prev_tick = tick
         prev_day = day

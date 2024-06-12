@@ -6,7 +6,7 @@ from models import TickOutcomes
 # sent a message to the pico using the PICO_TOPIC
 # then in the message body, send the device in the target
 # this is used in hardware as well
-class Device():
+class Device:
     STORAGE = "storage"
     EXTERNAL_GRID = "external-grid"
     PV_ARRAY = "pv-array"
@@ -19,13 +19,13 @@ PICO_TOPIC = "pico"
 SERVER_TOPIC = "server"
 
 class MClient:
-    def __init__(self, broker_addr="18.130.108.45", broker_port="1883"):
+    def __init__(self, broker_addr="18.130.108.45", broker_port=1883):
         self.client = paho.Client(paho.CallbackAPIVersion.VERSION2)
         self.client.on_connect = handle_connect
         self.client.on_message = self.handle_msg
         self.db_data = {}
 
-        if  self.client.connect(broker_addr, broker_port, keepalive=1000) != 0:
+        if self.client.connect(broker_addr, broker_port, keepalive=1000) != 0:
             raise Exception("Failed to connect to Broker")
         else:
             self.client.loop_start()
