@@ -132,9 +132,39 @@ def update_pid_gains(P_desired):
         gains = pid_gains["0-1"]
     kp, ki, kd = gains["kp"], gains["ki"], gains["kd"]
 
-# Start with no energy stored (9000)
-duty = int(min_pwm)
-pwm.duty_u16(duty)
+
+### Test below
+
+# Calculate the initial PWM duty cycle from the initial voltage
+def calculate_initial_duty(initial_voltage):
+    # Use the provided equation to calculate the initial duty cycle
+    # You might need to adjust the coefficients based on your system's characteristics
+    # Here's a simplified example assuming the equation is accurate
+    duty = int((-(-3E-05) + (3E-05)**2 - 4 * 6E-09 * (7.1367 - initial_voltage)) / (2 * 6E-09))
+    return max(0, min(duty, 65535))  # Ensure duty cycle is within valid range (0-65535)
+
+# Gradually adjust the PWM duty cycle towards the desired initial value
+def gradually_adjust_pwm(initial_duty, desired_duty, step_size=500):
+    current_duty = initial_duty
+    while current_duty != desired_duty:
+        if current_duty < desired_duty:
+            current_duty = min(current_duty + step_size, desired_duty)
+        else:
+            current_duty = max(current_duty - step_size, desired_duty)
+        pwm.duty_u16(current_duty)
+        utime.sleep_ms(250)  # Adjust the sleep time as needed for smooth transition
+
+# 1 second delay to let storage voltage stabilise
+utime.sleep_ms(1000)
+
+va = 1.017 * (12490 / 2490) * 3.3 * (va_pin.read_u16() / 65536)  # Va calculation
+initial_voltage = va
+print(f"Va: {va}")
+initial_duty = calculate_initial_duty(initial_voltage)  # Calculate initial duty cycle
+print(f"Initial Duty: {initial_duty}")
+gradually_adjust_pwm(initial_duty, 9000)  # Gradually adjust PWM duty cycle to 9000
+
+### Test above
 
 # Get initial desired power output
 P_desired = get_desired_power()
