@@ -7,11 +7,13 @@ class Variable {
     yValue: string;
     yUnit: string;
     graphType: GraphType;
+    colour: string | undefined;
 
-    constructor(yValue: string, yUnit: string, graphType: GraphType) {
+    constructor(yValue: string, yUnit: string, graphType: GraphType, colour?: string) {
         this.yValue = yValue;
         this.yUnit = yUnit;
         this.graphType = graphType;
+        this.colour = colour;
     }
 
     getYUnit() {

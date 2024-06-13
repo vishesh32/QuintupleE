@@ -1,4 +1,10 @@
 import { GraphData, Variable, FormatString, GraphType } from '@/helpers/graph_types';
+import { changeToLine } from './graph_funcs';
+
+const red = "#fa5246";
+const blue = "#3da9fc";
+const grey = "#5f6c7b";
+const yellow = "#ffd803";
 
 const x = "tick"
 
@@ -12,14 +18,14 @@ const AllVars = {
     real_storage_power: new Variable("avg_storage_power", "Watts", GraphType.Line),
     algo_storage_power: new Variable("algo_store_power", "Watts", GraphType.Line),
     exp_instant_demand: new Variable("demand", "Watts", GraphType.Line),
-    real_instant_demand: new Variable("avg_red_power", "Watts", GraphType.Line),
+    real_instant_demand: new Variable("avg_red_power", "Watts", GraphType.Line, red),
     soc: new Variable("storage_soc", "%", GraphType.Line),
-    algo_blue_def: new Variable("algo_blue_power", "Watts", GraphType.Bar),
-    algo_grey_def: new Variable("algo_grey_power", "Watts", GraphType.Bar),
-    algo_yellow_def: new Variable("algo_yellow_power", "Watts", GraphType.Bar),
-    real_blue_def: new Variable("avg_blue_power", "Watts", GraphType.Bar),
-    real_grey_def: new Variable("avg_grey_power", "Watts", GraphType.Bar),
-    real_yellow_def: new Variable("avg_yellow_power", "Watts", GraphType.Bar),
+    algo_blue_def: new Variable("algo_blue_power", "Watts", GraphType.Bar, blue),
+    algo_grey_def: new Variable("algo_grey_power", "Watts", GraphType.Bar, grey),
+    algo_yellow_def: new Variable("algo_yellow_power", "Watts", GraphType.Bar, yellow),
+    real_blue_def: new Variable("avg_blue_power", "Watts", GraphType.Bar, blue),
+    real_grey_def: new Variable("avg_grey_power", "Watts", GraphType.Bar, grey),
+    real_yellow_def: new Variable("avg_yellow_power", "Watts", GraphType.Bar, yellow),
 }
 
 const AllGraphs: GraphData[] = [
@@ -78,4 +84,23 @@ const Colours = [
 	"#994ff3",
 ]
 
-export { AllGraphs, AllVars, x, Colours }
+const LiveGraphs: GraphData[] = [
+    {
+        title: "SOC",
+        xValue: x,
+        unitData1: [AllVars.soc],
+        unitData2: [],
+        data: [],
+    },
+    {
+        title: "Demands",
+        xValue: x,
+        unitData1: [AllVars.real_instant_demand, changeToLine(AllVars.real_blue_def), changeToLine(AllVars.real_grey_def), changeToLine(AllVars.real_yellow_def)],
+        unitData2: [],
+        data: [],
+    }
+
+]
+
+
+export { AllGraphs, AllVars, x, Colours, LiveGraphs }

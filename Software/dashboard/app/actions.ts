@@ -13,7 +13,6 @@ else {
 }
 
 async function getTick(yValues: any) {
-  // console.log(yValues);
   var res = await db
     ?.collection("ticks")
     .find({}, { projection: { _id: 0, ...yValues, day: 1, tick: 1 } })
@@ -25,19 +24,21 @@ async function getTick(yValues: any) {
   return res;
 }
 
+async function getDayAndTick(){
+  const res = await fetch("https://icelec50015.azurewebsites.net/demand");
+  const data = await res.json();
+  return {
+    day: data.day,
+    tick: data.tick
+  }
+}
+
+async function getValuesOnTick(yValues: any, day: number, tick: number) {
+  var res = await db
+    ?.collection("ticks")
+    .findOne({tick: tick, day: day}, { projection: { _id: 0, ...yValues, day: 1, tick: 1 } });
+  return res;
+}
 
 
-// async function getTicksAfter(day: number, tick: number, prop: Variable){
-//   var res = await db
-//     ?.collection(prop.collection)
-//     .find({ day: { $gt: day }, tick: { $gt: tick } }, { projection: { _id: 0, [prop.value]: 1, ...xValues } })
-//     .sort({
-//       day: 1,
-//       tick: 1,
-//     })
-//     .toArray();
-//   return res;
-// }
-
-
-export { getTick };
+export { getTick, getDayAndTick, getValuesOnTick };

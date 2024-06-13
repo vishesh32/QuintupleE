@@ -12,7 +12,7 @@ import {
   ReferenceArea,
   ComposedChart,
   Legend,
-  Bar
+  Bar,
 } from "recharts";
 import {
   MagnifyingGlassMinusIcon,
@@ -187,40 +187,68 @@ function Plot({
 
           <CartesianGrid stroke="#ccc" />
 
-          {data.unitData1.map((vari, i) => vari.graphType == GraphType.Line? (
-            <Line
-              key={i}
-              isAnimationActive={animation}
-              type="monotone"
-              dataKey={vari.yValue}
-              stroke={Colours[i % Colours.length]}
-              activeDot={{ r: 5 }}
-              dot={{ r: 0 }}
-              yAxisId="left"
-              strokeWidth={2}
-            />
-          ): (
-            <Bar
-              key={i}
-              type="monotone"
-              dataKey={vari.yValue}
-              fill={Colours[i % Colours.length]}
-              yAxisId="left"
-            />
-          ))}
+          {data.unitData1.map((vari, i) =>
+            vari.graphType == GraphType.Line ? (
+              <Line
+                key={i}
+                isAnimationActive={animation}
+                type="monotone"
+                dataKey={vari.yValue}
+                stroke={
+                  vari.colour != undefined
+                    ? vari.colour
+                    : Colours[i % Colours.length]
+                }
+                activeDot={{ r: 5 }}
+                dot={{ r: 0 }}
+                yAxisId="left"
+                strokeWidth={2}
+              />
+            ) : (
+              <Bar
+                key={i}
+                type="monotone"
+                dataKey={vari.yValue}
+                fill={
+                  vari.colour != undefined
+                    ? vari.colour
+                    : Colours[i % Colours.length]
+                }
+                yAxisId="left"
+              />
+            )
+          )}
 
-          {data.unitData2.map((vari, i) => (
-            <Line
-              key={i + data.unitData1.length}
-              isAnimationActive={animation}
-              type="monotone"
-              dataKey={vari.yValue}
-              stroke={Colours[(i + data.unitData1.length) % Colours.length]}
-              activeDot={{ r: 5 }}
-              dot={{ r: 0 }}
-              yAxisId="right"
-            />
-          ))}
+          {data.unitData2.map((vari, i) =>
+            vari.graphType == GraphType.Line ? (
+              <Line
+                key={i + data.unitData1.length}
+                isAnimationActive={animation}
+                type="monotone"
+                dataKey={vari.yValue}
+                stroke={
+                  vari.colour != undefined
+                    ? vari.colour
+                    : Colours[(i + data.unitData1.length) % Colours.length]
+                }
+                activeDot={{ r: 5 }}
+                dot={{ r: 0 }}
+                yAxisId="right"
+              />
+            ) : (
+              <Bar
+                key={i}
+                type="monotone"
+                dataKey={vari.yValue}
+                fill={
+                  vari.colour != undefined
+                    ? vari.colour
+                    : Colours[i % Colours.length]
+                }
+                yAxisId="right"
+              />
+            )
+          )}
 
           <Tooltip content={CustomTooltip}></Tooltip>
 
