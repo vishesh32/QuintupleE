@@ -5,7 +5,9 @@ import Card from "@/components/Card/Card";
 import CreateGraph from "@/components/Modals/CreateGraph/CreateGraph";
 import Graph from "@/components/Graph/Graph";
 import { getTick } from "../actions";
-import { GraphData } from "@/helpers/graph_data";
+import { AllVars, GraphData, Variable } from "@/helpers/graph_data";
+
+let once = false;
 
 export default function History() {
   const [plotGraphModal, setPlotGraphModal] = useState<boolean>(false);
@@ -17,9 +19,9 @@ export default function History() {
 
   const handleAddPlot = () => setPlotGraphModal(true);
 
-  const addGraphData = (data: any, opt: string) => {
+  const addGraphData = (data: any, opt: Variable) => {
     if (data != null && data != undefined) {
-      var gData = new GraphData(idCount.current,"tick",opt,data)
+      var gData = new GraphData(idCount.current,"tick",opt.value,data)
       // console.log(gData)
       setGraphData((prev) => [...prev, gData]);
       idCount.current += 1;
@@ -33,56 +35,16 @@ export default function History() {
     });
   };
 
-  // useEffect(() => {
-  //   var opt = "buy_price";
-  //   getTick(opt).then((data) => addGraphData(data, opt));
-  // }, []);
+  useEffect(() => {
+    if(!once) getTick(AllVars[0]).then((data) => addGraphData(data, AllVars[0]));
+    once = true;
+    console.log(graphData)
+  }, [graphData]);
 
   return (
     <div>
-      {/* objects that take over the entire screen */}
-      {(plotGraphModal || graphFullScreen) && (
-        <div className="bg-black w-full h-full z-[10] fixed top-0 bg-opacity-20 backdrop-blur-sm flex justify-center items-center duration-300">
-          {plotGraphModal && (
-            <CreateGraph
-              setPlotGraphModal={setPlotGraphModal}
-              addGraph={addGraphData}
-            ></CreateGraph>
-          )}
-          {graphFullScreen && (
-            <Card className="h-[80%] animate-ttb">
-              <Graph
-                data={graphFullScreen}
-                handleRemoveGraph={null}
-                graphFullScreen={graphFullScreen}
-                setGraphFullScreen={setGraphFullScreen}
-                animation={true}
-              />
-            </Card>
-          )}
-        </div>
-      )}
-
-      {/* all of the graphs */}
-      <main className="w-full mt-6 grid 2xl:grid-cols-2">
-        {graphData.map((data, i) => (
-          <Card className="" key={i}>
-            <Graph
-              handleRemoveGraph={removeGraph}
-              graphFullScreen={graphFullScreen}
-              data={data}
-              setGraphFullScreen={setGraphFullScreen}
-              animation={true}
-            ></Graph>
-          </Card>
-        ))}
-
-        {/* button to add new graphs */}
-        <Card className="hover:brightness-[95%] duration-150">
-          <button className="w-full h-full" onClick={handleAddPlot}>
-            <p className="text-[#001E1D] text-opacity-80 text-[100px]">+</p>
-          </button>
-        </Card>
+      <main className="w-full mt-6 grid 2xl:gap-2 2xl:grid-cols-2">
+        {graphData.map((data, i) => (<Graph key={i} data={data} animation={false} />))}
       </main>
     </div>
   );

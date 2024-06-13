@@ -1,6 +1,4 @@
 enum Collection {
-    algo = "algo-decisions",
-    comp_states = "component-states",
     days = "days",
     ticks = "ticks",
 }
@@ -36,7 +34,13 @@ const AllVars : Variable[] = [
         value: "sun",
         units: "%",
         collection: Collection.ticks,
-    }
+    },
+    {
+        name: "Cost",
+        value: "cost",
+        units: "Cents",
+        collection: Collection.ticks,
+    },
 ];
 
 const xValues = {

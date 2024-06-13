@@ -1,6 +1,6 @@
 import paho.mqtt.client as paho
 import json
-from models import TickOutcomes
+from models import FullTick, Day, Tick
 
 # all the picos you can connect to
 # sent a message to the pico using the PICO_TOPIC
@@ -19,7 +19,7 @@ PICO_TOPIC = "pico"
 SERVER_TOPIC = "server"
 
 class MClient:
-    def __init__(self, broker_addr="18.130.108.45", broker_port=1883):
+    def __init__(self, broker_addr="35.178.119.19", broker_port=1883):
         self.client = paho.Client(paho.CallbackAPIVersion.VERSION2)
         self.client.on_connect = handle_connect
         self.client.on_message = self.handle_msg
@@ -103,27 +103,53 @@ class MClient:
         else:
             self.db_data[key] = [value]
 
-    def get_outcome_model(self, day, tick):
+    # def get_outcome_model(self, day, tick):
+    #     try:
+    #         return TickOutcomes(
+    #             day=day,
+    #             tick=tick,
+    #             cost=float(0),
+    #             avg_pv_power=float(self._get_avg(self.db_data["pv_power"])),
+    #             storage_soc=float(self.db_data["soc"]),
+    #             avg_storage_power=float(self._get_avg(self.db_data["storage_power"])),
+    #             avg_import_export_power=float(self._get_avg(self.db_data["import_power"]) + self._get_avg(self.db_data["export_power"])),
+    #             avg_red_power=float(self._get_avg(self.db_data[Device.LOADR])),
+    #             avg_blue_power=float(self._get_avg(self.db_data[Device.LOADB])),
+    #             avg_yellow_power=float(self._get_avg(self.db_data[Device.LOADY])),
+    #             avg_grey_power=float(self._get_avg(self.db_data[Device.LOADK]))
+    #         )
+    #     except:
+    #         print("failed to create object")
+    #         return None
+
+    def get_full_tick(self, tick: Tick, p_import, p_store, deferables_supplied) -> FullTick | None:
         try:
-            return TickOutcomes(
-                day=day,
-                tick=tick,
-                cost=0, # check how to calculate this
-                avg_pv_energy=self._get_avg(self.db_data["pv_power"]),
-                storage_soc=self.db_data["soc"],
-                avg_import_energy=self._get_avg(self.db_data["import_power"]),
-                avg_export_energy=self._get_avg(self.db_data["export_power"]),
-                avg_red_energy=self._get_avg(self.db_data[Device.LOADR]),
-                avg_blue_energy=self._get_avg(self.db_data[Device.LOADB]),
-                avg_yellow_energy=self._get_avg(self.db_data[Device.LOADY]),
-                avg_grey_energy=self._get_avg(self.db_data[Device.LOADK])
+            return FullTick(
+                day=tick.day,
+                tick=tick.tick,
+                demand=tick.demand,
+                sun=tick.sun,
+                buy_price=tick.buy_price,
+                sell_price=tick.sell_price,
+                cost=0.0,
+                avg_pv_power=self._get_avg(self.db_data["pv_power"]),
+                storage_soc=float(self.db_data["soc"]),
+                avg_storage_power=self._get_avg(self.db_data["storage_power"]),
+                avg_import_export_power=self._get_avg(self.db_data["import_power"]) + self._get_avg(self.db_data["export_power"]),
+                avg_red_power=self._get_avg(self.db_data[Device.LOADR]),
+                avg_blue_power=self._get_avg(self.db_data[Device.LOADB]),
+                avg_yellow_power=self._get_avg(self.db_data[Device.LOADY]),
+                avg_grey_power=self._get_avg(self.db_data[Device.LOADK]),
+                power_import=p_import,
+                power_store=p_store,
+                deferables_supplied=deferables_supplied,
             )
-        except:
-            print("failed to create object")
+        except Exception as e:
+            print(f"Failed to create object: {e}")
             return None
-        
+
     def _get_avg(self, data):
-        return sum(data) / len(data)
+        return float(sum(data) / len(data))
             
 
 

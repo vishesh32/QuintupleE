@@ -41,7 +41,6 @@ export default function NavBar(){
             <div className='flex justify-start text-center w-full'>
                 <Link className={`${navLinkStyle}` + (page === Page.HOME? " border-white": " border-transparent")} href="/" onClick={(e)=>setPage(Page.HOME)} >Home</Link>
                 <Link className={`${navLinkStyle}` + (page === Page.HISTORY? " border-white": " border-transparent")} href="/history" onClick={(e)=>setPage(Page.HISTORY)} >Historical</Link>
-                <Link className={`${navLinkStyle}` + (page === Page.MANAGEMENT? " border-white": " border-transparent")} href="/management" onClick={(e)=>setPage(Page.MANAGEMENT)} >Management</Link>
                 <Link className={`${navLinkStyle}` + (page === Page.CONTROLS? " border-white": " border-transparent")} href="/controls" onClick={(e)=>setPage(Page.CONTROLS)} >Controls</Link>
                 <Link className={`${navLinkStyle}` + (page === Page.SETTINGS? " border-white": " border-transparent")} href="/settings" onClick={(e)=>setPage(Page.SETTINGS)} >Settings</Link>
             </div>

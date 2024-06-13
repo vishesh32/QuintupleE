@@ -10,17 +10,9 @@ class DBClient:
         db = self.client["smartgrid"]
         self.day_db = db["days"]
         self.tick_db = db["ticks"]
-        self.outcomes_db = db["outcomes"]
-        self.algo_decs = db["algo-decisions"]
 
     def insert_day(self, day: Day):
         self.day_db.insert_one(day.model_dump())
 
-    def insert_tick(self, tick: Tick):
+    def insert_tick(self, tick: FullTick):
         self.tick_db.insert_one(tick.model_dump())
-
-    def insert_algo_decision(self, algo_decision: AlgoDecisions):
-        self.algo_decs.insert_one(algo_decision.model_dump())
-
-    def insert_tick_outcomes(self, tick_outcomes: TickOutcomes):
-        self.outcomes_db.insert_one(tick_outcomes.model_dump())

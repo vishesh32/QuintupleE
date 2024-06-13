@@ -46,6 +46,7 @@ DB_LOG = True
 setpoint = 0.3
 prev_tick = None
 prev_day = None
+prev_actions = None
 
 
 if __name__ == "__main__":
@@ -111,20 +112,21 @@ if __name__ == "__main__":
 
             # only write the previous tick data
             if prev_tick != None:
-                tick_outcomes = mqtt_client.get_outcome_model(tick.day, tick.tick)
-                # TODO: get data for algo decisions
-                algo_data = AlgoDecisions(day=tick.day, tick=tick.tick, power_import=actions["import_export"], power_store=actions["release_store"], deferables_supplied=actions["allocations"])
+                # tick_outcomes = mqtt_client.get_outcome_model(tick.day, tick.tick)
+                # # TODO: get data for algo decisions
+                # algo_data = AlgoDecisions(day=tick.day, tick=tick.tick, power_import=float(actions["import_export"]), power_store=float(actions["release_store"]), deferables_supplied=float(actions["allocations"]))
 
+                full_tick = mqtt_client.get_full_tick(prev_tick, prev_actions["import_export"], prev_actions["release_store"], prev_actions["allocations"])
                 # calc cost
 
                 # change cost in tick_outcomes
 
-                if tick_outcomes != None:
-                    db_client.insert_tick_outcomes(tick_outcomes)
-                    db_client.insert_tick(prev_tick)
-                    db_client.insert_algo_decision(algo_data)
+                if full_tick != None:
+                    db_client.insert_tick(full_tick)
+                    # db_client.insert_tick(prev_tick)
+                    # db_client.insert_algo_decision(algo_data)
                 else:
-                    print("could not write to database, tickoutcomes is empty")
+                    print("could not write to database, full_tick is empty")
             
             # write data for a new day
             if prev_tick != None and prev_tick.tick == 0:
@@ -137,6 +139,7 @@ if __name__ == "__main__":
 
         prev_tick = tick
         prev_day = day
+        prev_actions = actions
 
         # Finds the exact start of the next tick
         delay = time.time() - start

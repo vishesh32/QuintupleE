@@ -22,7 +22,6 @@ async function getTick(prop: Variable) {
       tick: 1,
     })
     .toArray();
-  // console.log(res)
   return res;
 }
 
