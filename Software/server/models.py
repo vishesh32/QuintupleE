@@ -41,6 +41,8 @@ class FullTick(BaseModel):
 	avg_grey_power: float
 
 	# algo decisions
-	power_import: float
-	power_store: float
-	deferables_supplied: List[float]
+	algo_import_power: float
+	algo_store_power: float
+	algo_blue_power: float
+	algo_yellow_power: float
+	algo_grey_power: float

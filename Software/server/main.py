@@ -73,9 +73,9 @@ if __name__ == "__main__":
         if RUN_ALGO:
             print_preaction(tick, env)
             cost, actions = predict(policy_network, env, tick, history)
-            actions["import_export"] = actions["import_export"] * 0.1
-            actions["release_store"] = actions["release_store"] * 0.1
-            actions["allocations"] = [a * 0.1 for a in actions["allocations"]]
+            actions["import_export"] = actions["import_export"] * 0.1 * 0.2
+            actions["release_store"] = actions["release_store"] * 0.1 * 0.2
+            actions["allocations"] = [a * 0.1 * 0.2 for a in actions["allocations"]]
 
             print(f"\n\n\nsending this to storage {actions['release_store']}\n\n\n")
 
@@ -92,7 +92,7 @@ if __name__ == "__main__":
             #     print()
 
         # send data to picos
-        if RUN_BROKER:
+        if RUN_BROKER and mqtt_client != None and mqtt_client.manual == False:
             # divide by to convert to power
             mqtt_client.send_storage_power(-1*actions["release_store"]/5)
 
@@ -103,28 +103,26 @@ if __name__ == "__main__":
             mqtt_client.send_load_power(Device.LOADR, tick.demand/4)
 
             # 3 extra defferables are grey, yellow, blue
-            mqtt_client.send_load_power(Device.LOADK, actions["allocations"][1]/5)
-            mqtt_client.send_load_power(Device.LOADY, actions["allocations"][2]/5)
-            mqtt_client.send_load_power(Device.LOADB, actions["allocations"][0]/5)
+            mqtt_client.send_load_power(Device.LOADB, actions["allocations"][0])
+            mqtt_client.send_load_power(Device.LOADK, actions["allocations"][1])
+            mqtt_client.send_load_power(Device.LOADY, actions["allocations"][2])
 
         # add data to the database for each new day and algorithms decsions
-        if DB_LOG:
+        if DB_LOG and mqtt_client.manual == False:
 
             # only write the previous tick data
             if prev_tick != None:
-                # tick_outcomes = mqtt_client.get_outcome_model(tick.day, tick.tick)
-                # # TODO: get data for algo decisions
-                # algo_data = AlgoDecisions(day=tick.day, tick=tick.tick, power_import=float(actions["import_export"]), power_store=float(actions["release_store"]), deferables_supplied=float(actions["allocations"]))
-
                 full_tick = mqtt_client.get_full_tick(prev_tick, prev_actions["import_export"], prev_actions["release_store"], prev_actions["allocations"])
                 # calc cost
+                avg_import = mqtt_client._get_avg(mqtt_client.db_data["import_power"])
+                avg_export = mqtt_client._get_avg(mqtt_client.db_data["export_power"])
+                cost = avg_import*5*tick.sell_price + avg_export * avg_export*5*tick.buy_price
 
                 # change cost in tick_outcomes
+                full_tick.cost = cost
 
                 if full_tick != None:
                     db_client.insert_tick(full_tick)
-                    # db_client.insert_tick(prev_tick)
-                    # db_client.insert_algo_decision(algo_data)
                 else:
                     print("could not write to database, full_tick is empty")
             
@@ -145,13 +143,3 @@ if __name__ == "__main__":
         delay = time.time() - start
         sleep(WAIT - delay)
         day, tick = sync_with_server(tick.tick, TICK_LENGTH)
-
-
-# if RUN_BROKER:
-#     # send data to correct circuit component here
-#     # mqtt_client.send_sun_data(tick.sun)
-#     # mqtt_client.send_storage_smps(algo_sim.energy_store)
-#     # mqtt_client.send_ext_grid_smps(algo_sim.energy_import)
-#     mqtt_client.send_load(1, setpoint)
-#     print("Published to broker")
-#     print(list(mqtt_client.db_data.values()))

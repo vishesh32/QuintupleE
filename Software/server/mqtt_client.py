@@ -17,6 +17,9 @@ class Device:
 
 PICO_TOPIC = "pico"
 SERVER_TOPIC = "server"
+UI_TOPIC = "ui"
+
+OVERRIDE_TARGET = "override"
 
 class MClient:
     def __init__(self, broker_addr="35.178.119.19", broker_port=1883):
@@ -24,6 +27,7 @@ class MClient:
         self.client.on_connect = handle_connect
         self.client.on_message = self.handle_msg
         self.db_data = {}
+        self.manual = False
 
         if self.client.connect(broker_addr, broker_port, keepalive=1000) != 0:
             raise Exception("Failed to connect to Broker")
@@ -43,6 +47,9 @@ class MClient:
     def send_load_power(self, load: str, power):
         self.client.publish(PICO_TOPIC, json.dumps({"target": load, "payload": power}), 2)
 
+    def send_override(self):
+        self.client.publish(UI_TOPIC, json.dumps({"target": OVERRIDE_TARGET, "payload": self.manual}), 2)
+
     def end(self):
         self.client.disconnect()
 
@@ -59,6 +66,10 @@ class MClient:
 
             if "target" not in data or "payload" not in data:
                 raise Exception("Invalid message format")
+            
+            elif data["target"] == OVERRIDE_TARGET:
+                if str(data["payload"]) == "req": self.send_override()
+                else: self.manual = data["payload"]
             
             elif data["target"] == Device.EXTERNAL_GRID:
                 import_power = data["payload"]["import_power"] 
@@ -103,25 +114,6 @@ class MClient:
         else:
             self.db_data[key] = [value]
 
-    # def get_outcome_model(self, day, tick):
-    #     try:
-    #         return TickOutcomes(
-    #             day=day,
-    #             tick=tick,
-    #             cost=float(0),
-    #             avg_pv_power=float(self._get_avg(self.db_data["pv_power"])),
-    #             storage_soc=float(self.db_data["soc"]),
-    #             avg_storage_power=float(self._get_avg(self.db_data["storage_power"])),
-    #             avg_import_export_power=float(self._get_avg(self.db_data["import_power"]) + self._get_avg(self.db_data["export_power"])),
-    #             avg_red_power=float(self._get_avg(self.db_data[Device.LOADR])),
-    #             avg_blue_power=float(self._get_avg(self.db_data[Device.LOADB])),
-    #             avg_yellow_power=float(self._get_avg(self.db_data[Device.LOADY])),
-    #             avg_grey_power=float(self._get_avg(self.db_data[Device.LOADK]))
-    #         )
-    #     except:
-    #         print("failed to create object")
-    #         return None
-
     def get_full_tick(self, tick: Tick, p_import, p_store, deferables_supplied) -> FullTick | None:
         try:
             return FullTick(
@@ -140,9 +132,11 @@ class MClient:
                 avg_blue_power=self._get_avg(self.db_data[Device.LOADB]),
                 avg_yellow_power=self._get_avg(self.db_data[Device.LOADY]),
                 avg_grey_power=self._get_avg(self.db_data[Device.LOADK]),
-                power_import=p_import,
-                power_store=p_store,
-                deferables_supplied=deferables_supplied,
+                algo_import_power=p_import,
+                algo_store_power=p_store,
+                algo_blue_power=deferables_supplied[0],
+                algo_yellow_power=deferables_supplied[1],
+                algo_grey_power=deferables_supplied[2]
             )
         except Exception as e:
             print(f"Failed to create object: {e}")

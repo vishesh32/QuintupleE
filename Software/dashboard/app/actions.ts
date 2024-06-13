@@ -1,7 +1,6 @@
 "use server";
 require("dotenv").config();
 import { MongoClient, Db } from "mongodb";
-import { Variable, xValues } from "@/helpers/graph_data";
 
 var client: MongoClient | undefined;
 var db: Db | undefined;
@@ -13,10 +12,11 @@ else {
   db = client.db("smartgrid");
 }
 
-async function getTick(prop: Variable) {
+async function getTick(yValues: any) {
+  // console.log(yValues);
   var res = await db
-    ?.collection(prop.collection)
-    .find({}, { projection: { _id: 0, [prop.value]: 1, ...xValues } })
+    ?.collection("ticks")
+    .find({}, { projection: { _id: 0, ...yValues, day: 1, tick: 1 } })
     .sort({
       day: 1,
       tick: 1,
@@ -27,17 +27,17 @@ async function getTick(prop: Variable) {
 
 
 
-async function getTicksAfter(day: number, tick: number, prop: Variable){
-  var res = await db
-    ?.collection(prop.collection)
-    .find({ day: { $gt: day }, tick: { $gt: tick } }, { projection: { _id: 0, [prop.value]: 1, ...xValues } })
-    .sort({
-      day: 1,
-      tick: 1,
-    })
-    .toArray();
-  return res;
-}
+// async function getTicksAfter(day: number, tick: number, prop: Variable){
+//   var res = await db
+//     ?.collection(prop.collection)
+//     .find({ day: { $gt: day }, tick: { $gt: tick } }, { projection: { _id: 0, [prop.value]: 1, ...xValues } })
+//     .sort({
+//       day: 1,
+//       tick: 1,
+//     })
+//     .toArray();
+//   return res;
+// }
 
 
-export { getTick, getTicksAfter };
+export { getTick };

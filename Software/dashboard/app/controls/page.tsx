@@ -31,8 +31,12 @@ export default function ManualControl() {
         setImportPower,
         setExportPower,
         setSoc,
-        setSocPower
+        setSocPower,
+        setOverride
       );
+
+    // check whether the server is set to manual or use the algorithm
+    mClient.current?.ask_override_status();
   }, []);
 
   useEffect(() => {
@@ -41,7 +45,9 @@ export default function ManualControl() {
   }, [currentPV, peakPV]);
 
   const handleOverrideClick = () => {
-    setOverride(!override);
+    const tmp = override;
+    setOverride(!tmp);
+    mClient.current?.send_override_status(!tmp);
   };
 
   return (

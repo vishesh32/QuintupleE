@@ -1,4 +1,5 @@
-import { GraphData, FormatString } from "@/helpers/graph_data";
+import { GraphData, FormatString, GraphType } from "@/helpers/graph_types";
+import { Colours } from "@/helpers/graph_data";
 import React, { useState } from "react";
 import {
   Line,
@@ -10,7 +11,8 @@ import {
   ResponsiveContainer,
   ReferenceArea,
   ComposedChart,
-  Legend
+  Legend,
+  Bar
 } from "recharts";
 import {
   MagnifyingGlassMinusIcon,
@@ -42,7 +44,7 @@ export default function Graph({
         </div>
       )}
       <Plot
-      className="h-[600px]"
+        className="h-[700px]"
         data={data}
         animation={animation}
         graphFullScreen={graphFullScreen}
@@ -109,7 +111,11 @@ function Plot({
   const makeSmaller = () => setGraphFullScreen(false);
 
   return (
-    <div className={`w-full bg-blue flex flex-col justify-center items-center bg-primary rounded-2xl ${className}`}>
+    <div
+      className={`w-full bg-blue flex flex-col justify-center items-center bg-primary rounded-2xl ${className}`}
+    >
+      {/* title */}
+      <h2 className="text-secondary text-2xl font-bold">{data.title}</h2>
       {/* Control buttons */}
       <div className="w-full flex p-1 pb-4">
         <button
@@ -145,38 +151,92 @@ function Plot({
             allowDataOverflow
             dataKey={data.xValue}
             label={{
-              value: data.getXLabel(),
+              value: FormatString(data.xValue),
               position: "insideBottom",
-              offset: -5,
+              offset: -8,
             }}
             padding={{ left: 5, right: 5 }}
           />
 
-          <YAxis
-            allowDataOverflow
-            label={{
-              value: data.getYLabel(),
-              angle: -90,
-              position: "insideLeft",
-            }}
-          />
+          {data.unitData1.length > 0 && (
+            <YAxis
+              allowDataOverflow
+              label={{
+                value: data.unitData1[0].getYUnit(),
+                angle: -90,
+                position: "insideLeft",
+                offset: 10,
+              }}
+              yAxisId="left"
+            />
+          )}
+
+          {data.unitData2.length > 0 && (
+            <YAxis
+              allowDataOverflow
+              label={{
+                value: data.unitData2[0].getYUnit(),
+                angle: -90,
+                position: "insideRight",
+                offset: 10,
+              }}
+              yAxisId="right"
+              orientation="right"
+            />
+          )}
+
           <CartesianGrid stroke="#ccc" />
 
-          <Line
-            isAnimationActive={animation}
-            type="monotone"
-            dataKey={data.yValue}
-            // stroke="#000000"
-            activeDot={{ r: 3 }}
-            dot={{ r: 3 }}
-          ></Line>
+          {data.unitData1.map((vari, i) => vari.graphType == GraphType.Line? (
+            <Line
+              key={i}
+              isAnimationActive={animation}
+              type="monotone"
+              dataKey={vari.yValue}
+              stroke={Colours[i % Colours.length]}
+              activeDot={{ r: 5 }}
+              dot={{ r: 0 }}
+              yAxisId="left"
+              strokeWidth={2}
+            />
+          ): (
+            <Bar
+              key={i}
+              type="monotone"
+              dataKey={vari.yValue}
+              fill={Colours[i % Colours.length]}
+              yAxisId="left"
+            />
+          ))}
+
+          {data.unitData2.map((vari, i) => (
+            <Line
+              key={i + data.unitData1.length}
+              isAnimationActive={animation}
+              type="monotone"
+              dataKey={vari.yValue}
+              stroke={Colours[(i + data.unitData1.length) % Colours.length]}
+              activeDot={{ r: 5 }}
+              dot={{ r: 0 }}
+              yAxisId="right"
+            />
+          ))}
 
           <Tooltip content={CustomTooltip}></Tooltip>
 
-          <Legend></Legend>
+          <Legend
+            wrapperStyle={{
+              paddingTop: "10px",
+            }}
+          />
 
           {leftZoom && rightZoom && (
-            <ReferenceArea x1={leftZoom} x2={rightZoom}></ReferenceArea>
+            <ReferenceArea
+              yAxisId="left"
+              isFront={true}
+              x1={leftZoom}
+              x2={rightZoom}
+            ></ReferenceArea>
           )}
         </ComposedChart>
       </ResponsiveContainer>
