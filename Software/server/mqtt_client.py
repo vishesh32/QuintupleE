@@ -35,17 +35,17 @@ class MClient:
             self.client.loop_start()
 
     def send_sun_data(self, sun_val):
-        self.client.publish(PICO_TOPIC, json.dumps({"target": Device.PV_ARRAY , "payload": sun_val}), 2)
+        self.client.publish(self._get_pico_topic(Device.PV_ARRAY), json.dumps({"target": Device.PV_ARRAY , "payload": sun_val}), 2)
 
     # def send_external_grid(self, power):
     #     self.client.publish(PICO_TOPIC, json.dumps({"target": Device.EXTERNAL_GRID , "payload": power}), 2)
 
     def send_storage_power(self, power):
-        self.client.publish(PICO_TOPIC, json.dumps({"target": Device.STORAGE, "payload": power}), 2)
+        self.client.publish(self._get_pico_topic(Device.STORAGE), json.dumps({"target": Device.STORAGE, "payload": power}), 2)
 
     # transmit actual voltage div by 10
     def send_load_power(self, load: str, power):
-        self.client.publish(PICO_TOPIC, json.dumps({"target": load, "payload": power}), 2)
+        self.client.publish(self._get_pico_topic(load), json.dumps({"target": load, "payload": power}), 2)
 
     def send_override(self):
         self.client.publish(UI_TOPIC, json.dumps({"target": OVERRIDE_TARGET, "payload": self.manual}), 2)
@@ -144,6 +144,9 @@ class MClient:
 
     def _get_avg(self, data):
         return float(sum(data) / len(data))
+    
+    def _get_pico_topic(device: str) -> str:
+        return f"{PICO_TOPIC}/{device}"
             
 
 

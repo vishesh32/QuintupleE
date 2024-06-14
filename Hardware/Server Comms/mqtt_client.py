@@ -18,7 +18,8 @@ MQTT_BROKER_PORT = 1883
 
 
 # all devices
-class DEVICE :
+# topics to subscribe to
+class DEVICE:
     STORAGE = "storage"
     EXTERNAL_GRID = "external-grid"
     PV_ARRAY =  "pv-array"
@@ -29,7 +30,7 @@ class DEVICE :
 
 
 class MClient:
-    def __init__(self, device: str=None):
+    def __init__(self, device: str):
         init()
 
         from umqtt.simple import MQTTClient
@@ -47,8 +48,8 @@ class MClient:
         client.connect()
 
         self.client = client
-        self.client.subscribe(PICO_TOPIC)
-        print(f"Waiting for messages on {PICO_TOPIC}")
+        self.client.subscribe(f"{PICO_TOPIC}/{device}")
+        print(f"Waiting for messages on {PICO_TOPIC}/{device}")
 
         self.desired_power = 0
         self.power_req = 0

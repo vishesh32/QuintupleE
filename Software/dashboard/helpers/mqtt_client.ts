@@ -115,14 +115,14 @@ class MQTTClient {
 
   send_irradiance(val: number) {
     this.client.publish(
-      picoTopic,
+      `${picoTopic}/${Device.PV_ARRAY}`,
       JSON.stringify({ target: Device.PV_ARRAY, payload: val })
     );
   }
 
   send_storage_power(val: number) {
     this.client.publish(
-      picoTopic,
+      `${picoTopic}/${Device.STORAGE}`,
       JSON.stringify({ target: Device.STORAGE, payload: val })
     );
     // console.log("here")
@@ -130,7 +130,7 @@ class MQTTClient {
 
   send_load_power(val: number, load: string) {
     this.client.publish(
-      picoTopic,
+      `${picoTopic}/${load}`,
       JSON.stringify({ target: load, payload: val })
     );
   }

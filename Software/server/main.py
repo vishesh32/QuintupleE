@@ -108,7 +108,7 @@ if __name__ == "__main__":
             mqtt_client.send_load_power(Device.LOADY, actions["allocations"][2])
 
         # add data to the database for each new day and algorithms decsions
-        if DB_LOG and mqtt_client.manual == False:
+        if DB_LOG and mqtt_client != None and mqtt_client.manual == False:
 
             # only write the previous tick data
             if prev_tick != None:
