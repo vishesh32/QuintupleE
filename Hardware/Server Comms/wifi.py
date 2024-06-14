@@ -2,8 +2,8 @@ import network
 from time import sleep
 
 
-ssid = 'Galaxy S20'
-password = 'sctx2351'
+ssid = 'Grid'
+password = '11223344'
 
 def init():
     #Connect to WLAN
