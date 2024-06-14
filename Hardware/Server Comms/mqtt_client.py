@@ -33,7 +33,7 @@ class MClient:
     def __init__(self, device: str):
         init()
 
-        from umqtt.simple import MQTTClient
+        from umqtt.robust import MQTTClient
 
         client = MQTTClient(
             client_id=MQTT_CLIENT_ID,

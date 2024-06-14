@@ -18,5 +18,9 @@ const changeToLine = (variable: Variable): Variable => {
   variable.graphType = GraphType.Line;
   return variable;
 }
+const changeToBar = (variable: Variable): Variable => {
+  variable.graphType = GraphType.Bar;
+  return variable;
+}
 
-export { getYValues, changeToLine };
+export { getYValues, changeToLine, changeToBar };

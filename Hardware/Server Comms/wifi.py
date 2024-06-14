@@ -18,6 +18,7 @@ def init():
     import mip
     # mip.install('https://raw.githubusercontent.com/micropython/micropython-lib/b50d3462d783e4aab2f10d6b8117641244918f64/micropython/umqtt.simple/umqtt/simple.py')
     mip.install("umqtt.simple")
+    mip.install("umqtt.robust")
 
 if __name__ == "__main__":
     init()

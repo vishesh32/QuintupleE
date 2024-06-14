@@ -1,5 +1,5 @@
 import { GraphData, Variable, FormatString, GraphType } from '@/helpers/graph_types';
-import { changeToLine } from './graph_funcs';
+import { changeToLine, changeToBar } from './graph_funcs';
 
 const red = "#fa5246";
 const blue = "#3da9fc";
@@ -23,9 +23,12 @@ const AllVars = {
     algo_blue_def: new Variable("algo_blue_power", "Watts", GraphType.Bar, blue),
     algo_grey_def: new Variable("algo_grey_power", "Watts", GraphType.Bar, grey),
     algo_yellow_def: new Variable("algo_yellow_power", "Watts", GraphType.Bar, yellow),
-    real_blue_def: new Variable("avg_blue_power", "Watts", GraphType.Bar, blue),
-    real_grey_def: new Variable("avg_grey_power", "Watts", GraphType.Bar, grey),
-    real_yellow_def: new Variable("avg_yellow_power", "Watts", GraphType.Bar, yellow),
+    real_blue_def: new Variable("avg_blue_power", "Watts", GraphType.Line, blue),
+    real_grey_def: new Variable("avg_grey_power", "Watts", GraphType.Line, grey),
+    real_yellow_def: new Variable("avg_yellow_power", "Watts", GraphType.Line, yellow),
+    breal_blue_def: new Variable("avg_blue_power", "Watts", GraphType.Bar, blue),
+    breal_grey_def: new Variable("avg_grey_power", "Watts", GraphType.Bar, grey),
+    breal_yellow_def: new Variable("avg_yellow_power", "Watts", GraphType.Bar, yellow),
 }
 
 const AllGraphs: GraphData[] = [
@@ -67,7 +70,7 @@ const AllGraphs: GraphData[] = [
     {
         title: "Deferrables",
         xValue: x,
-        unitData1: [AllVars.real_blue_def, AllVars.algo_blue_def, AllVars.real_grey_def, AllVars.algo_grey_def, AllVars.real_yellow_def, AllVars.algo_yellow_def],
+        unitData1: [AllVars.breal_blue_def, AllVars.algo_blue_def, AllVars.breal_grey_def, AllVars.algo_grey_def, AllVars.breal_yellow_def, AllVars.algo_yellow_def],
         unitData2: [AllVars.buy, AllVars.sell],
         data: null,
     }
@@ -84,7 +87,7 @@ const Colours = [
 	"#994ff3",
 ]
 
-const LiveGraphs: GraphData[] = [
+var LiveGraphs: GraphData[] = [
     {
         title: "SOC",
         xValue: x,
@@ -95,7 +98,7 @@ const LiveGraphs: GraphData[] = [
     {
         title: "Demands",
         xValue: x,
-        unitData1: [AllVars.real_instant_demand, changeToLine(AllVars.real_blue_def), changeToLine(AllVars.real_grey_def), changeToLine(AllVars.real_yellow_def)],
+        unitData1: [AllVars.real_instant_demand, AllVars.real_blue_def, AllVars.real_grey_def, AllVars.real_yellow_def],
         unitData2: [],
         data: [],
     }

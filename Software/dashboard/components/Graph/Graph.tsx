@@ -1,6 +1,6 @@
 import { GraphData, FormatString, GraphType } from "@/helpers/graph_types";
 import { Colours } from "@/helpers/graph_data";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Line,
   LineChart,
