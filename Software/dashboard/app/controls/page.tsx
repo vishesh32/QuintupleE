@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import Card from "@/components/Card/Card";
+import Card from "@/components/Card/SmallCard";
+import InputCard from "@/components/Card/InputCard";
 import { MQTTClient, Device } from "@/helpers/mqtt_client";
 import Graph from "../../components/Graph/Graph";
 
@@ -67,30 +68,16 @@ export default function ManualControl() {
       </div>
       <main className="p-5 flex ml-12 mr-12 h-full gap-5">
         <div className="flex-1 flex gap-2 flex-row flex-wrap justify-center">
-          <Card
-            className="w-full "
-            top={<p>Manual Irradiance</p>}
-            middle={
-              <>
-                <p>Enter Irradiance</p>
-                <input
-                  disabled={!override}
-                  placeholder="Enter a value"
-                  onKeyDown={(e: any) => {
-                    if (e.key === "Enter") {
-                      // console.log(parseFloat(inIrr));
-                      mClient.current?.send_irradiance(parseFloat(inIrr));
-                    }
-                  }}
-                  value={inIrr}
-                  onChange={(e) => setInIrr(e.target.value)}
-                  className="ml-auto font-normal text-2xl outline-none border-2 rounded-md text-[#828282] pl-2 pr-2"
-                  type="text"
-                />
-              </>
-            }
-            bottom={<p>PV Array</p>}
-          ></Card>
+          <InputCard
+          top={<p>Manual Irradiance</p>}
+          bottom={<p>PV Array</p>}
+          override={override}
+          name={"Enter Irradiance"}
+          onKeyDown={()=>mClient.current?.send_irradiance(parseFloat(inIrr))}
+          value={inIrr}
+          onChange={(e) => setInIrr(e.target.value)}
+          placeholder={"Enter a value"}
+          ></InputCard>
 
           <Card
             className=""

@@ -44,7 +44,7 @@ export default function Graph({
         </div>
       )}
       <Plot
-        className="h-[700px]"
+        className="h-[500px]"
         data={data}
         animation={animation}
         graphFullScreen={graphFullScreen}
