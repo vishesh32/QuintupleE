@@ -104,7 +104,6 @@ class MClient:
                 load_power = data["payload"]
                 self.add_to_dict(load, load_power)
             
-            # print(self.db_data)
         except Exception as e:
             print(f"Error message: {e}")
 
@@ -145,7 +144,7 @@ class MClient:
     def _get_avg(self, data):
         return float(sum(data) / len(data))
     
-    def _get_pico_topic(device: str) -> str:
+    def _get_pico_topic(self, device: str) -> str:
         return f"{PICO_TOPIC}/{device}"
             
 

@@ -27,7 +27,7 @@ class MQTTClient {
     this.client.on("connect", () => console.log("Connected to MQTT Broker"));
     this.client.on("error", (err: any) => console.error(err));
     this.client.on("message", (topic: any, message: any) => {
-      console.log(`Received message on topic ${topic}: ${message.toString()}`);
+      // console.log(`Received message on topic ${topic}: ${message.toString()}`);
       const msgObj = JSON.parse(message.toString());
 
       // this is data that is to be sent and stored on the server
@@ -79,6 +79,7 @@ class MQTTClient {
             break;
           }
           case Device.EXTERNAL_GRID: {
+            console.log(msgObj.payload);
             if (msgObj.payload.import_power)
               setImportPower(msgObj.payload.import_power.toFixed(prec));
             else if (msgObj.payload.export_power)

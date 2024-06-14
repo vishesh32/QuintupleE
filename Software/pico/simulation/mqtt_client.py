@@ -10,7 +10,7 @@ SND = "snd/"
 SUN_TOPIC = "sun"
 EXT_GRID_TOPIC = "external-grid"
 STORAGE_TOPIC = "storage"
-LOAD_TOPICS = ["load1","load2","load3","load4"]
+LOAD_TOPICS = ["loadR","loadB","loadK","loadY"]
 
 class SMPS(BaseModel):
 	SMPS: str
@@ -33,19 +33,20 @@ class MClient():
             self.client.loop_start()
         
     def send_sun_data(self, smps: SMPS):
-        self.client.publish(RCV+SUN_TOPIC, json.dumps({**smps.model_dump(), "tick": self.tick}), 0)
+        self.client.publish("pico/"+SUN_TOPIC, json.dumps({"target": self.type, "payload": 10}), 0)
         self.tick += 1
 
     def send_ext_grid_smps(self, smps: SMPS):
-        self.client.publish(RCV+EXT_GRID_TOPIC, json.dumps(smps.model_dump()), 0)
+        self.client.publish("pico/"+EXT_GRID_TOPIC, json.dumps({"target": self.type, "payload": {"import": 10, "export": None}}), 0)
 
     def send_storage_smps(self, smps: SMPS):
-        self.client.publish(RCV+STORAGE_TOPIC, json.dumps(smps.model_dump()), 0)
+        self.client.publish("pico/"+STORAGE_TOPIC, json.dumps({"target": self.type, "payload": {"type": "soc", "value": 10}}), 0)
+        self.client.publish("pico/"+STORAGE_TOPIC, json.dumps({"target": self.type, "payload": {"type": "power", "value": 10}}), 0)
 
     def send_load(self, load_num, smps: SMPS):
         if not (load_num >= 1 and load_num <= 4): raise Exception("Invalid value for load_num, when sending data to the load")
 
-        self.client.publish(RCV+LOAD_TOPICS[load_num - 1], json.dumps(smps.model_dump()), 0)
+        self.client.publish("pico/"+LOAD_TOPICS[load_num - 1], json.dumps({"target": self.type, "payload": 10}), 0)
 
     def end(self):
         self.client.disconnect()

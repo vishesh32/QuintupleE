@@ -1,4 +1,4 @@
-import requests
+#import requests
 from time import sleep
 
 import asyncio
@@ -19,7 +19,7 @@ from mqtt_client import MClient, Device
 from external.parallel_get import get_day_and_tick
 from external.sync import sync_with_server
 from utils import print_preaction, print_postaction
-from models import AlgoDecisions
+# from models import AlgoDecisions
 
 mqtt_client: MClient | None = None
 
@@ -71,25 +71,18 @@ if __name__ == "__main__":
 
         # part that runs the start of every new tick
         if RUN_ALGO:
-            print_preaction(tick, env)
+            # print_preaction(tick, env)
             cost, actions = predict(policy_network, env, tick, history)
             actions["import_export"] = actions["import_export"] * 0.1 * 0.2
             actions["release_store"] = actions["release_store"] * 0.1 * 0.2
             actions["allocations"] = [a * 0.1 * 0.2 for a in actions["allocations"]]
 
-            print(f"\n\n\nsending this to storage {actions['release_store']}\n\n\n")
+            # print(f"\n\n\nsending this to storage {actions['release_store']}\n\n\n")
 
             daily_costs.append(cost)
             # print_postaction(actions, tick, cost)
 
-            # if tick.tick == 59:
-            #     costs.append(cost_per_day)
-            #     ema_costs = get_ema(costs, 100)
-            #     print("Total cost for day:", cost_per_day)
-            #     print("Average cost per day:", sum(costs) / len(costs))
-            #     print("EMA (100) cost per day:", ema_costs[-1])
-            #     print("-" * 20)
-            #     print()
+
 
         # send data to picos
         if RUN_BROKER and mqtt_client != None and mqtt_client.manual == False:
@@ -107,24 +100,30 @@ if __name__ == "__main__":
             mqtt_client.send_load_power(Device.LOADK, actions["allocations"][1])
             mqtt_client.send_load_power(Device.LOADY, actions["allocations"][2])
 
+        print(list(mqtt_client.db_data.keys()), len(list(mqtt_client.db_data.keys())))
+
         # add data to the database for each new day and algorithms decsions
         if DB_LOG and mqtt_client != None and mqtt_client.manual == False:
 
             # only write the previous tick data
             if prev_tick != None:
                 full_tick = mqtt_client.get_full_tick(prev_tick, prev_actions["import_export"], prev_actions["release_store"], prev_actions["allocations"])
-                # calc cost
-                avg_import = mqtt_client._get_avg(mqtt_client.db_data["import_power"])
-                avg_export = mqtt_client._get_avg(mqtt_client.db_data["export_power"])
-                cost = avg_import*5*tick.sell_price + avg_export * avg_export*5*tick.buy_price
+                
+                try:
+                    # calc cost
+                    avg_import = mqtt_client._get_avg(mqtt_client.db_data["import_power"])
+                    avg_export = mqtt_client._get_avg(mqtt_client.db_data["export_power"])
+                    cost = avg_import*5*tick.sell_price + avg_export * avg_export*5*tick.buy_price
 
-                # change cost in tick_outcomes
-                full_tick.cost = cost
+                    # change cost in tick_outcomes
+                    full_tick.cost = cost
+                except Exception as e:
+                    print(f"Failed to calculate cost: {e}")
+
 
                 if full_tick != None:
                     db_client.insert_tick(full_tick)
-                else:
-                    print("could not write to database, full_tick is empty")
+                    print("\n\n\nWritten to db\n\n\n")
             
             # write data for a new day
             if prev_tick != None and prev_tick.tick == 0:
