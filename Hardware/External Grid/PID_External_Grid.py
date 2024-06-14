@@ -18,7 +18,7 @@ min_pwm = 1000
 max_pwm = 64536
 pwm_out = min_pwm
 pwm_ref = 30000
-duty = 0
+
 # Some error signals
 trip = 0
 OC = 0
@@ -32,6 +32,8 @@ vb_ref = 0  # Voltage reference for the CL modes
 vb_err = 0  # Voltage error
 vb_err_int = 0  # Voltage error integral
 vb_pi_out = 0  # Output of the voltage PI controller
+
+
 kp = 100  # Boost Proportional Gain
 ki = 250  # Boost Integral Gain
 
@@ -113,7 +115,7 @@ while True:
         first_run = 0
 
         # This starts a 1kHz timer which we use to control the execution of the control loops and sampling
-        loop_timer = Timer(mode=Timer.PERIODIC, freq=1000, callback=tick)
+        loop_timer = Timer(mode=Timer.PERIODIC, freq=2000, callback=tick)
         energy_start_time = time.time()
 
     # If the timer has elapsed it will execute some functions, otherwise it skips everything and repeats until the timer elapses
@@ -129,25 +131,14 @@ while True:
         vpot = sum(v_pot_filt) / 100  # Actual reading used is the average of the last 100 readings
 
         Vshunt = ina.vshunt()
-        CL = OL_CL_pin.value()  # Are we in closed or open loop mode
-        BU = BU_BO_pin.value()  # Are we in buck or boost mode?
 
         # New min and max PWM limits and we use the measured current directly
-        min_pwm = 0
-        max_pwm = 64536
         iL = Vshunt / SHUNT_OHMS
         # pwm_ref = saturate(65536-(int((vpot/3.3)*65536)),max_pwm,min_pwm) # convert the pot value to a PWM value for use later
         pwm_ref = vb_at_bus_voltage(vb, pwm_ref)
-
         # Energy calculation integration over 5 seconds
         power = (va if iL < 0 else vb) * abs(iL)  # Power in watts
         energy_accumulator += power / 1000.0  # Power in mW, loop runs every 1 ms
-
-        if time.time() - energy_start_time >= 5:
-            energy = energy_accumulator  # Total energy in mWs over the 5-second period
-            energy_accumulator = 0
-            energy_start_time = time.time()
-
         
         vb_ref = saturate(6.15, 6.2, 6.1)
         vb_err = vb_ref - vb  # calculate the error in voltage
@@ -155,28 +146,46 @@ while True:
         vb_err_int = saturate(vb_err_int, 10000, -10000)  # saturate the integral error
         vb_pi_out = (kp * vb_err) + (ki * vb_err_int)  # Calculate a PI controller output
 
-        pwm_out = saturate(vb_pi_out, max_pwm, min_pwm)  # Saturate that PI output 
+        i_err_int = 0 #reset integrator
+        
+        if iL > 2: # Current limiting function
+            pwm_out = pwm_out - 5 # if there is too much current, knock down the duty cycle
+            OC = 1 # Set the OC flag
+            pwm_out = saturate(pwm_out, pwm_ref, min_pwm)
+        elif iL < -2:
+            pwm_out = pwm_out + 5 # We are now below the current limit so bring the duty back up
+            OC = 1 # Reset the OC flag
+            pwm_out = saturate(pwm_out, max_pwm, pwm_ref)
+        else:
+            pwm_out = pwm_ref
+            OC = 0
+            pwm_out = saturate(pwm_out, pwm_ref, min_pwm)
+            
+        pwm_out = vb_pi_out
         duty = int(65536 - pwm_out)  # Invert because reasons
+        duty = saturate(duty, max_pwm, min_pwm)
         pwm.duty_u16(duty)  # Send the output of the PI controller out as PWM
+        
 
         # Keep a count of how many times we have executed and reset the timer so we can go back to waiting
         count = count + 1
         timer_elapsed = 0
+        
+        if time.time() - energy_start_time >= 5:
+            energy = energy_accumulator  # Total energy in mWs over the 5-second period
+            energy_accumulator = 0
+            energy_start_time = time.time()
 
         # This set of prints executes every 100 loops by default and can be used to output debug or extra info over USB enable or disable lines as needed
-        if count > 100:
-            print("Va = {:.3f}".format(va))
-            print("Vb = {:.3f}".format(vb))
-            print("Vpot = {:.3f}".format(vpot))
-            print("iL = {:.3f}".format(iL))
-            print("OC = {:b}".format(OC))
-            print("CL = {:b}".format(CL))
-            print("BU = {:b}".format(BU))
-            print("duty = {:d}".format(duty))
-            print("i_err = {:.3f}".format(vb_err))
-            print("i_ref = {:.3f}".format(vb_ref))
+        if count > 35:
+            #print("Vb: {:.3f}".format(vb))
+            #print("duty: {:d}".format(duty))
+            print("iL: {:.3f}".format(iL))
             if iL < 0:
-                print("Energy Supplied = {:.3f} J".format(energy))
+                #print("Supplied: {:.3f}".format(energy))
+                pass
             else:
-                print("Energy Imported = {:.3f} J".format(energy))
+                #print("Imported: {:.3f}".format(energy))
+                pass
             count = 0
+

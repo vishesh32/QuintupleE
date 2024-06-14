@@ -16,13 +16,13 @@ pwm_out = min_pwm
 
 # Constants
 SHUNT_OHMS = 0.10
-MPP = 0
+MPP = 4.2
 
 # Initialize variables
-irradiance = 100
+irradiance = 0
 power_sum = 0
 sample_count = 0
-P_desired = MPP
+P_desired = MPP * irradiance
 
 # Basic signals to control logic flow
 global timer_elapsed
@@ -89,18 +89,6 @@ def saturate(signal, upper, lower):
 def tick(t): 
     global timer_elapsed
     timer_elapsed = 1
-
-# Function to get user input for desired power output
-def get_irradiance():
-    while True:
-        try:
-            Irradiance = float(input("Enter irradiance as %: "))
-            if 0 <= Irradiance <= 100:  # Limiting the value of input to between 0 and 100
-                return Irradiance
-            else:
-                print("Irradiance % is not valid")
-        except ValueError:
-            print("Invalid input. Please enter a numeric value.")
 
 # PID Controller update
 def update_pid(error):
@@ -179,7 +167,7 @@ while True:
 
         # every 10s
         # Check for new desired power output input and print average power every 5 seconds
-        if count >= 2000:
+        if count >= 1000:
             average_power = power_sum / sample_count
             print(f"Average Power over last 5 seconds: {average_power:.2f} W")
             P_desired = round ((irradiance * MPP) / 100, 2)
