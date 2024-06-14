@@ -85,6 +85,7 @@ class ina219:
 def saturate(signal, upper, lower): 
     return max(min(signal, upper), lower)
 
+
 # This is the function executed by the loop timer, it simply sets a flag which is used to control the main loop
 def tick(t): 
     global timer_elapsed
@@ -149,20 +150,14 @@ while True:
         if count % 25 == 0:
             # Print data in consistent format
             print(f"P: {power_output:.2f} W")
-            irradiance = client.get_irradiance(power_output)
+            irradiance = client.get_irradiance()
 
 
 
         # send irradiance
         # every 1s
         if count % 200:
-            client.send_pv_power()
-
-        # every 5s
-        if count % 1000 == 0:
-            # Print data in consistent format
-            print("5 seconds mark")
-            irradiance = client.get_irradiance()
+            client.send_pv_power(power_output)
             
 
         # every 10s
@@ -174,4 +169,3 @@ while True:
             power_sum = 0  # Reset power sum
             sample_count = 0  # Reset sample count
             count = 0
-

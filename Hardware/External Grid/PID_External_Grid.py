@@ -1,5 +1,8 @@
 from machine import Pin, I2C, ADC, PWM, Timer
 import time
+from mqtt_client import MClient, DEVICE
+
+client = MClient(DEVICE.EXTERNAL_GRID)
 
 # Set up some pin allocations for the Analogues and switches
 va_pin = ADC(Pin(28))
@@ -34,8 +37,8 @@ vb_err_int = 0  # Voltage error integral
 vb_pi_out = 0  # Output of the voltage PI controller
 
 
-kp = 100  # Boost Proportional Gain
-ki = 250  # Boost Integral Gain
+kp = 10  # Boost Proportional Gain
+ki = 1  # Boost Integral Gain
 
 # Basic signals to control logic flow
 global timer_elapsed
@@ -180,12 +183,11 @@ while True:
         if count > 35:
             #print("Vb: {:.3f}".format(vb))
             #print("duty: {:d}".format(duty))
-            print("iL: {:.3f}".format(iL))
+            #print("iL: {:.3f}".format(iL))
             if iL < 0:
                 #print("Supplied: {:.3f}".format(energy))
-                pass
+                client.send_external_grid(None, energy)
             else:
                 #print("Imported: {:.3f}".format(energy))
-                pass
+                client.send_external_grid(None, 0)
             count = 0
-

@@ -62,13 +62,9 @@ while True:
         print("Vret = {:.3f}".format(vret))
         print("Duty = {:.0f}".format(pwm_out))
 
-
-        # show on ui
-        print("Output Current = {:.3f}".format(i_shunt))
-        client.send_shunt_current(i_shunt)
-
         # store this
         print("Output Power = {:.3f}".format(power))
         client.send_load_power(power)
         count = 0
         pid.setpoint = setpoint
+

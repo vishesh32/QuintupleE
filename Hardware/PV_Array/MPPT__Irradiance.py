@@ -13,7 +13,7 @@ pwm_out = min_pwm
 
 # Constants
 SHUNT_OHMS = 0.10
-MPP = 0
+MPP = 2.4
 
 # Initialize variables
 irradiance = 100
@@ -166,8 +166,9 @@ while True:
         if count >= 2000:
             average_power = power_sum / sample_count
             print(f"Average Power over last 5 seconds: {average_power:.2f} W")
-            #P_desired = round ((get_irradiance() * MPP) / 100, 2)
+            P_desired = round ((get_irradiance() * MPP) / 100, 2)
             power_sum = 0  # Reset power sum
             sample_count = 0  # Reset sample count
             count = 0
+
 
