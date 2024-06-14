@@ -115,7 +115,12 @@ def adaptive_step_size(prev_power, output_power, step):
 prev_va = 0
 prev_iL = 0
 current_duty = min_pwm
-step = 500
+step = 1000
+
+duty = int(65536 - max_pwm)
+pwm.duty_u16(duty)
+print(f"Initialising duty at: {duty}")
+utime.sleep_ms(5000)
 
 prev_power = 0
 
@@ -124,81 +129,90 @@ va_filter = MovingAverageFilter(size=5)
 iL_filter = MovingAverageFilter(size=5)
 
 # Hysteresis band around MPP
-hysteresis_band = 0.1
+hysteresis_band = 0.05
 
-# Here we go, main function, always executes
-while True:
-    if first_run:
-        # for first run, set up the INA link and the loop timer settings
-        ina = ina219(SHUNT_OHMS, 64, 5)
-        ina.configure()
-        first_run = 0
-        
-        # This starts a 1kHz timer which we use to control the execution of the control loops and sampling
-        loop_timer = Timer(mode=Timer.PERIODIC, freq=500, callback=tick)
+
+with open('/Data.csv', 'w') as file:
+    file.write('Time,Power\n')  # Write the header row
+    # Here we go, main function, always executes
+    start_time = utime.ticks_ms()  # Get the start time in milliseconds
     
-    # If the timer has elapsed it will execute some functions, otherwise it skips everything and repeats until the timer elapses
-    if timer_elapsed == 1:  # This is executed at 1kHz
-        va = 1.017 * (12490 / 2490) * 3.3 * (va_pin.read_u16() / 65536)  # calibration factor * potential divider ratio * ref voltage * digital reading
-        vb = 1.015 * (12490 / 2490) * 3.3 * (vb_pin.read_u16() / 65536)  # calibration factor * potential divider ratio * ref voltage * digital reading
-        Vshunt = ina.vshunt()
-        iL = Vshunt / SHUNT_OHMS
-
-        # Apply moving average filter
-        va_filter.add_value(va)
-        iL_filter.add_value(iL)
-        va = va_filter.get_average()
-        iL = iL_filter.get_average()
-
-        # Incremental Conductance Algorithm
-        delta_iL = iL - prev_iL
-        delta_va = va - prev_va
-
-        output_power = vb * iL  # Calculate output power (Va * iL)
-        output_power = round(output_power, 5)
-        prev_power = round(prev_power, 5)
+    while True:
+        if first_run:
+            # for first run, set up the INA link and the loop timer settings
+            ina = ina219(SHUNT_OHMS, 64, 5)
+            ina.configure()
+            first_run = 0
+            
+            # This starts a 1kHz timer which we use to control the execution of the control loops and sampling
+            loop_timer = Timer(mode=Timer.PERIODIC, freq=2000, callback=tick)
         
-        if delta_va != 0:
-            incremental_conductance = delta_iL / delta_va
-            instantaneous_conductance = -iL / va
+        # If the timer has elapsed it will execute some functions, otherwise it skips everything and repeats until the timer elapses
+        if timer_elapsed == 1:  # This is executed at 1kHz
+            va = 1.017 * (12490 / 2490) * 3.3 * (va_pin.read_u16() / 65536)  # calibration factor * potential divider ratio * ref voltage * digital reading
+            vb = 1.015 * (12490 / 2490) * 3.3 * (vb_pin.read_u16() / 65536)  # calibration factor * potential divider ratio * ref voltage * digital reading
+            Vshunt = ina.vshunt()
+            iL = Vshunt / SHUNT_OHMS
 
-            incremental_conductance = round(incremental_conductance, 5)
-            instantaneous_conductance = round(instantaneous_conductance, 5)
+            # Apply moving average filter
+            va_filter.add_value(va)
+            iL_filter.add_value(iL)
+            va = va_filter.get_average()
+            iL = iL_filter.get_average()
 
-            if incremental_conductance == instantaneous_conductance:
-                # At MPP, no change needed
-                pass
-            elif incremental_conductance > instantaneous_conductance + hysteresis_band:
-                # To the left of MPP, increase voltage (decrease duty cycle)
-                current_duty -= step
-            elif incremental_conductance < instantaneous_conductance - hysteresis_band:
-                # To the right of MPP, decrease voltage (increase duty cycle)
-                current_duty += step
-        
-        # Adjust the step size
-        step = adaptive_step_size(prev_power, output_power, step)
-        
-        # Ensure the duty cycle stays within bounds
-        current_duty = saturate(current_duty, max_pwm, min_pwm)
-        duty = int(65536 - current_duty)  # Invert because of hardware requirements
-        pwm.duty_u16(duty)  # Set the PWM duty cycle
-        
-        # Update previous values for next iteration
-        prev_va = va
-        prev_iL = iL
+            # Incremental Conductance Algorithm
+            delta_iL = iL - prev_iL
+            delta_va = va - prev_va
 
-        # Adjust the delay dynamically
-        delay = adaptive_delay(prev_power, output_power, 10)
-        utime.sleep_ms(delay)
+            output_power = vb * iL  # Calculate output power (Va * iL)
+            output_power = round(output_power, 5)
+            prev_power = round(prev_power, 5)
+            
+            if delta_va != 0:
+                incremental_conductance = delta_iL / delta_va
+                instantaneous_conductance = -iL / va
 
-        # Calculate output power
-        output_power = vb * iL  # Calculate output power (Va * iL)
+                incremental_conductance = round(incremental_conductance, 5)
+                instantaneous_conductance = round(instantaneous_conductance, 5)
 
-        # Keep a count of how many times we have executed and reset the timer so we can go back to waiting
-        count += 1
-        timer_elapsed = 0
+                if incremental_conductance == instantaneous_conductance:
+                    # At MPP, no change needed
+                    pass
+                elif incremental_conductance > instantaneous_conductance + hysteresis_band:
+                    # To the left of MPP, increase voltage (decrease duty cycle)
+                    current_duty -= step
+                elif incremental_conductance < instantaneous_conductance - hysteresis_band:
+                    # To the right of MPP, decrease voltage (increase duty cycle)
+                    current_duty += step
+            
+            # Adjust the step size
+            step = adaptive_step_size(prev_power, output_power, step)
+            
+            # Ensure the duty cycle stays within bounds
+            current_duty = saturate(current_duty, max_pwm, min_pwm)
+            duty = int(65536 - current_duty)  # Invert because of hardware requirements
+            pwm.duty_u16(duty)  # Set the PWM duty cycle
+            
+            # Update previous values for next iteration
+            prev_va = va
+            prev_iL = iL
 
-        # This set of prints executes every 100 loops by default and can be used to output debug or extra info over USB enable or disable lines as needed
-        if count > 10:
-            print(f"Po = {output_power:.3f}")
-            count = 0
+            # Adjust the delay dynamically
+            delay = adaptive_delay(prev_power, output_power, 10)
+            utime.sleep_ms(delay)
+
+            # Calculate output power
+            output_power = vb * iL  # Calculate output power (Va * iL)
+
+            # Keep a count of how many times we have executed and reset the timer so we can go back to waiting
+            count += 1
+            timer_elapsed = 0
+
+            # This set of prints executes every 100 loops by default and can be used to output debug or extra info over USB enable or disable lines as needed
+            if count > 1:
+                elapsed_time = (utime.ticks_ms() - start_time)
+                
+                print(f"Time = {elapsed_time}s, Po = {output_power:.5f}")
+                file.write(f"{elapsed_time:.2f},{output_power:.5f}\n")
+                count = 0
+

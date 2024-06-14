@@ -91,59 +91,71 @@ current_duty = min_pwm
 prev_duty =  min_pwm
 prev_power = 0
 direction = 1
-step = 500
+step = 1000
 
-# Here we go, main function, always executes
-while True:
+duty = int(65536 - max_pwm)
+pwm.duty_u16(duty)
+print(f"Initialising duty at: {duty}")
+utime.sleep_ms(1000)
 
-    if first_run:
-        # for first run, set up the INA link and the loop timer settings
-        ina = ina219(SHUNT_OHMS, 64, 5)
-        ina.configure()
-        first_run = 0
-        
-        # This starts a 1kHz timer which we use to control the execution of the control loops and sampling
-        loop_timer = Timer(mode=Timer.PERIODIC, freq=500, callback=tick)
-    
-    # If the timer has elapsed it will execute some functions, otherwise it skips everything and repeats until the timer elapses
-    if timer_elapsed == 1:  # This is executed at 1kHz
-        va = 1.017 * (12490 / 2490) * 3.3 * (va_pin.read_u16() / 65536)  # calibration factor * potential divider ratio * ref voltage * digital reading
-        vb = 1.015 * (12490 / 2490) * 3.3 * (vb_pin.read_u16() / 65536)  # calibration factor * potential divider ratio * ref voltage * digital reading
-        Vshunt = ina.vshunt()
-        iL = Vshunt / SHUNT_OHMS
 
-        # MPPT algorithm
-        output_power = vb * iL  # Calculate output power (Va * iL)
-        output_power = round(output_power, 5)
-        prev_power = round(prev_power, 5)
+with open('/Data.csv', 'w') as file:
+    file.write('Time,Power\n')  # Write the header row
+    # Here we go, main function, always executes
+    start_time = utime.ticks_ms()  # Get the start time in milliseconds
+    # Here we go, main function, always executes
+    while True:
 
-        # Adjust the step size
-        step = adaptive_step_size(prev_power, output_power, step)
-
-        # Compare current power with previous power
-        if output_power > prev_power:
-            prev_power = output_power
-            prev_duty = current_duty
-            current_duty += step * direction
-        else:
-            direction *= -1  # Change the direction
-            current_duty = prev_duty + step * direction
-        
-        # Ensure the duty cycle stays within bounds
-        current_duty = saturate(current_duty, max_pwm, min_pwm)
-        duty = 65536 - current_duty  # Invert because of hardware requirements
-        pwm.duty_u16(duty)  # Set the PWM duty cycle
+        if first_run:
+            # for first run, set up the INA link and the loop timer settings
+            ina = ina219(SHUNT_OHMS, 64, 5)
+            ina.configure()
+            first_run = 0
             
-        # Reduces Oscillations in data (for low loads)
-        utime.sleep_ms(25)
+            # This starts a 1kHz timer which we use to control the execution of the control loops and sampling
+            loop_timer = Timer(mode=Timer.PERIODIC, freq=500, callback=tick)
         
-        # Keep a count of how many times we have executed and reset the timer so we can go back to waiting
-        count = count + 1
-        timer_elapsed = 0
+        # If the timer has elapsed it will execute some functions, otherwise it skips everything and repeats until the timer elapses
+        if timer_elapsed == 1:  # This is executed at 1kHz
+            va = 1.017 * (12490 / 2490) * 3.3 * (va_pin.read_u16() / 65536)  # calibration factor * potential divider ratio * ref voltage * digital reading
+            vb = 1.015 * (12490 / 2490) * 3.3 * (vb_pin.read_u16() / 65536)  # calibration factor * potential divider ratio * ref voltage * digital reading
+            Vshunt = ina.vshunt()
+            iL = Vshunt / SHUNT_OHMS
 
-        
-        # This set of prints executes every 100 loops by default and can be used to output debug or extra info over USB enable or disable lines as needed
-        if count > 5:
-            print("Po: {:.5f}".format(output_power))
-            count = 0
+            # MPPT algorithm
+            output_power = vb * iL  # Calculate output power (Va * iL)
+            output_power = round(output_power, 5)
+            prev_power = round(prev_power, 5)
+
+            # Adjust the step size
+            step = adaptive_step_size(prev_power, output_power, step)
+
+            # Compare current power with previous power
+            if output_power > prev_power:
+                prev_power = output_power
+                prev_duty = current_duty
+                current_duty += step * direction
+            else:
+                direction *= -1  # Change the direction
+                current_duty = prev_duty + step * direction
+            
+            # Ensure the duty cycle stays within bounds
+            current_duty = saturate(current_duty, max_pwm, min_pwm)
+            duty = 65536 - current_duty  # Invert because of hardware requirements
+            pwm.duty_u16(duty)  # Set the PWM duty cycle
+                
+            # Reduces Oscillations in data (for low loads)
+            utime.sleep_ms(25)
+            
+            # Keep a count of how many times we have executed and reset the timer so we can go back to waiting
+            count = count + 1
+            timer_elapsed = 0
+
+            
+            # This set of prints executes every 100 loops by default and can be used to output debug or extra info over USB enable or disable lines as needed
+            if count > 20:
+                elapsed_time = (utime.ticks_ms() - start_time)
+                print(f"Time = {elapsed_time}s, Po = {output_power:.5f}")
+                file.write(f"{elapsed_time:.2f},{output_power:.5f}\n")
+                count = 0
 
