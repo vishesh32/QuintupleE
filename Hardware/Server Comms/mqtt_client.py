@@ -2,9 +2,7 @@ import machine
 import ubinascii
 from wifi import init
 import json
-# uncomment this line to import the helper functions
-# and line 60
-# from helper_functions import get_desired_power
+
 
 # topics
 PICO_TOPIC = "pico"
@@ -99,7 +97,10 @@ class MClient:
     
     def get_desired_power(self):
         self.check_msg()
-        # return get_desired_power(self.desired_power)
+        
+        if(abs(self.desired_power) <= 2):
+            return self.desired_power
+        else: return 0
 
     def get_irradiance(self):
         self.check_msg()

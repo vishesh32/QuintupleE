@@ -1,8 +1,8 @@
 from machine import Pin, I2C, ADC, PWM, Timer
 import time
-#from mqtt_client import MClient, Device
+from mqtt_client import MClient, DEVICE
 
-#client = MClient(Device.EXTERNAL_GRID)
+client = MClient(DEVICE.EXTERNAL_GRID)
 
 # Set up some pin allocations for the Analogues and switches
 va_pin = ADC(Pin(28))

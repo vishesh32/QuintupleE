@@ -1,7 +1,9 @@
 from machine import Pin, I2C, ADC, PWM, Timer
 import time, utime
 import math
+from mqtt_client import MClient, DEVICE
 
+client = MClient(DEVICE.STORAGE)
 
 # Initialization
 va_pin = ADC(Pin(28))
@@ -259,10 +261,11 @@ while True:
             print(f"P: {power_output*10:.2f}, SoC: {soc/10:.2f}, iL: {iL*1000:.2f}, T: {count//200}")
 
         # Check for new desired power output input and print average power every 5 seconds
+        # runs every: s
         if count >= 1000:
             average_power = power_sum / sample_count
             print(f"Average Power over last 5 seconds: {average_power:.2f} W")
-            P_desired = get_desired_power()
+            P_desired = client.get_desired_power()
             update_pid_gains(P_desired)  # Update PID gains based on new desired power
             start_time = utime.ticks_ms()  # Reset the start time
             power_sum = 0  # Reset power sum
@@ -270,3 +273,5 @@ while True:
             
             count = 0
 
+            client.send_storage_power(average_power)
+            client.send_soc(soc)
