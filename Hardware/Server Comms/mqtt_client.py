@@ -67,14 +67,15 @@ class MClient:
                 self.desired_power = data["payload"]
                 # print(f"desired_power: {self.desired_power}")
 
+            elif data["target"] == DEVICE.PV_ARRAY:
+                self.irradiance = data["payload"]
+                print(f"Irradiance: {self.irradiance}")
+                
             # this is for all loads
             elif data["target"] == self.device:
                 self.power_req = data["payload"]
                 print(f"power_req: {self.power_req}")
 
-            elif data["target"] == DEVICE.PV_ARRAY:
-                self.irradiance = data["payload"]
-                print(f"Irradiance: {self.irradiance}")
 
         except Exception as e:
             print(f"Error when processing message: {e}\nRecieved: {topic.decode()}, {msg.decode()}")
