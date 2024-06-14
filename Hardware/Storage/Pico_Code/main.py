@@ -3,10 +3,10 @@ import utime
 from ina219 import INA219
 from pid_controller import PIDController
 from helper_functions import saturate, get_desired_power, calculate_soc, update_pid_gains
-from mqtt_client import MClient
+from mqtt_client import MClient, Device
 
 # connect to wifi and broker
-client = MClient()
+client = MClient(Device.STORAGE)
 
 # Constants
 SHUNT_OHMS = 0.1

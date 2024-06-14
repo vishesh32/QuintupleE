@@ -1,8 +1,8 @@
 from machine import Pin, I2C, ADC, PWM, Timer
 import time
-from mqtt_client import MClient
+from mqtt_client import MClient, Device
 
-#client = MClient()
+client = MClient(Device.EXTERNAL_GRID)
 
 # Set up some pin allocations for the Analogues and switches
 va_pin = ADC(Pin(28))
@@ -194,8 +194,8 @@ while True:
             print("i_ref = {:.3f}".format(i_ref))
             if iL < 0:
                 print("Energy Supplied = {:.3f} J".format(energy))
-                #client.send_external_grid(None, energy)    
+                client.send_external_grid(None, energy)    
             else:
                 print("Energy Imported = {:.3f} J".format(energy))
-                #client.send_external_grid(None, 0)
+                client.send_external_grid(None, 0)
             count = 0
