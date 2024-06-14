@@ -25,6 +25,7 @@ mqtt_client: MClient | None = None
 
 # reduce this time if internet is slow
 WAIT = 4.5
+SCALE = 0.2
 
 
 # ALGORITHM SETUP
@@ -73,9 +74,11 @@ if __name__ == "__main__":
         if RUN_ALGO:
             # print_preaction(tick, env)
             cost, actions = predict(policy_network, env, tick, history)
-            actions["import_export"] = actions["import_export"] * 0.1 * 0.2
-            actions["release_store"] = actions["release_store"] * 0.1 * 0.2
-            actions["allocations"] = [a * 0.1 * 0.2 for a in actions["allocations"]]
+            print(f"before: {actions}")
+            actions["import_export"] = actions["import_export"] * SCALE * 0.2
+            actions["release_store"] = actions["release_store"] * SCALE * 0.2
+            actions["allocations"] = [a * SCALE * 0.2 for a in actions["allocations"]]
+            print(f"after: {actions}")
 
             # print(f"\n\n\nsending this to storage {actions['release_store']}\n\n\n")
 
@@ -100,7 +103,7 @@ if __name__ == "__main__":
             mqtt_client.send_load_power(Device.LOADK, actions["allocations"][1])
             mqtt_client.send_load_power(Device.LOADY, actions["allocations"][2])
 
-        print(list(mqtt_client.db_data.keys()), len(list(mqtt_client.db_data.keys())))
+        # print(list(mqtt_client.db_data.keys()), len(list(mqtt_client.db_data.keys())))
 
         # add data to the database for each new day and algorithms decsions
         if DB_LOG and mqtt_client != None and mqtt_client.manual == False:
@@ -111,19 +114,22 @@ if __name__ == "__main__":
                 
                 try:
                     # calc cost
-                    avg_import = mqtt_client._get_avg(mqtt_client.db_data["import_power"])
-                    avg_export = mqtt_client._get_avg(mqtt_client.db_data["export_power"])
+                    avg_import = mqtt_client._get_avg(mqtt_client.db_data["import_power"]) if "import_data" in mqtt_client.db_data else 0
+                    avg_export = mqtt_client._get_avg(mqtt_client.db_data["export_power"]) if "export_power" in mqtt_client.db_data else 0
                     cost = avg_import*5*tick.sell_price + avg_export * avg_export*5*tick.buy_price
 
+                    # print(avg_import, avg_export, cost)
+
                     # change cost in tick_outcomes
-                    full_tick.cost = cost
+                    if full_tick != None: full_tick.cost = cost
+                    print(f"Cost: {cost}")
                 except Exception as e:
                     print(f"Failed to calculate cost: {e}")
 
 
                 if full_tick != None:
                     db_client.insert_tick(full_tick)
-                    print("\n\n\nWritten to db\n\n\n")
+                    # print("\n\n\nWritten to db\n\n\n")
             
             # write data for a new day
             if prev_tick != None and prev_tick.tick == 0:

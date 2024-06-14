@@ -94,7 +94,7 @@ class MClient:
 
     def get_power_req(self):
         self.check_msg()
-        return self.power_req
+        return self.power_req if self.power_req > 0.01 else -1
     
     def get_desired_power(self):
         self.check_msg()
