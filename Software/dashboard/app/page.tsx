@@ -84,7 +84,7 @@ export default function Home() {
         <SmallCard
           className="ml-auto"
           top={<p>Cost</p>}
-          middle={<p>{liveData.cost} ¢</p>}
+          middle={<p>{liveData.cost.toFixed(2)} ¢</p>}
           bottom={<p>Buy Price: {liveData.buy} ¢/J | Sell Price: {liveData.sell} ¢/J </p>}
           />
       </div>

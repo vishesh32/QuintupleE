@@ -74,11 +74,11 @@ if __name__ == "__main__":
         if RUN_ALGO:
             # print_preaction(tick, env)
             cost, actions = predict(policy_network, env, tick, history)
-            print(f"before: {actions}")
-            actions["import_export"] = actions["import_export"] * SCALE * 0.2
-            actions["release_store"] = actions["release_store"] * SCALE * 0.2
+            # print(f"before: {actions}")
+            actions["import_export"] = actions["import_export"] * SCALE
+            actions["release_store"] = actions["release_store"] * SCALE * -1
             actions["allocations"] = [a * SCALE * 0.2 for a in actions["allocations"]]
-            print(f"after: {actions}")
+            # print(f"after: {actions}")
 
             # print(f"\n\n\nsending this to storage {actions['release_store']}\n\n\n")
 
@@ -90,13 +90,15 @@ if __name__ == "__main__":
         # send data to picos
         if RUN_BROKER and mqtt_client != None and mqtt_client.manual == False:
             # divide by to convert to power
-            mqtt_client.send_storage_power(-1*actions["release_store"]/5)
+            mqtt_client.send_storage_power(actions["release_store"])
 
             # sending the irradiance
             mqtt_client.send_sun_data(tick.sun)
 
+            tick.demand = tick.demand / (4 * 4)
+
             # Red is instant deferrable
-            mqtt_client.send_load_power(Device.LOADR, tick.demand/4)
+            mqtt_client.send_load_power(Device.LOADR, tick.demand)
 
             # 3 extra defferables are grey, yellow, blue
             mqtt_client.send_load_power(Device.LOADB, actions["allocations"][0])
@@ -114,11 +116,11 @@ if __name__ == "__main__":
                 
                 try:
                     # calc cost
-                    avg_import = mqtt_client._get_avg(mqtt_client.db_data["import_power"]) if "import_data" in mqtt_client.db_data else 0
-                    avg_export = mqtt_client._get_avg(mqtt_client.db_data["export_power"]) if "export_power" in mqtt_client.db_data else 0
-                    cost = avg_import*5*tick.sell_price + avg_export * avg_export*5*tick.buy_price
+                    avg_import = mqtt_client._get_avg(prev_import)
+                    avg_export = mqtt_client._get_avg(prev_export)
+                    cost = full_tick.avg_import_export_power*5*tick.sell_price + avg_export*5*tick.buy_price
 
-                    # print(avg_import, avg_export, cost)
+                    print(avg_import, avg_export, cost)
 
                     # change cost in tick_outcomes
                     if full_tick != None: full_tick.cost = cost
@@ -129,7 +131,7 @@ if __name__ == "__main__":
 
                 if full_tick != None:
                     db_client.insert_tick(full_tick)
-                    # print("\n\n\nWritten to db\n\n\n")
+                    print(f"Written to db for tick {prev_tick.tick}")
             
             # write data for a new day
             if prev_tick != None and prev_tick.tick == 0:
@@ -138,6 +140,8 @@ if __name__ == "__main__":
                 db_client.insert_day(day)
 
             # reset the data stored from previous tick
+            prev_import = mqtt_client.db_data["import_power"] if "import_power" in mqtt_client.db_data else [0]
+            prev_export = mqtt_client.db_data["export_power"] if "export_power" in mqtt_client.db_data else [0]
             mqtt_client.reset_db_data()
 
         prev_tick = tick

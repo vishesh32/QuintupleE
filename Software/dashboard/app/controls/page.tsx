@@ -168,7 +168,7 @@ export default function ManualControl() {
             className="w-[260px]"
             top={<p>Import Power</p>}
             middle={<p>{importPower}W</p>}
-            bottom={<p>Storage</p>}
+            bottom={<p>External Grid</p>}
           />
           <Card
             className="w-[260px]"

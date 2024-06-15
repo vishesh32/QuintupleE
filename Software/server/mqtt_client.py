@@ -91,6 +91,7 @@ class MClient:
                 if data["payload"]["type"] == "soc":
                     soc = data["payload"]["value"]
                     self.db_data["soc"] = soc
+                    # print(f"SOC: {soc}")
                 elif data["payload"]["type"] == "power":
                     storage_power = data["payload"]["value"]
                     # self.db_data["storage_power"] += [storage_power]
@@ -114,28 +115,6 @@ class MClient:
 
     def get_full_tick(self, tick: Tick, p_import, p_store, deferables_supplied) -> FullTick | None:
         try:
-            # print("start")
-            # print(tick.day)
-            # print(tick.tick)
-            # print(tick.demand)
-            # print(tick.sun)
-            # print(tick.buy_price)
-            # print(tick.sell_price)
-            # print(0.0)
-            # print(self._get_avg(self.db_data["pv_power"]))
-            # print(float(self.db_data["soc"]))
-            # print(self._get_avg(self.db_data["storage_power"]))
-            # print(self._get_avg(self._get_from_db_data("import_power")) + self._get_avg(self._get_from_db_data("export_power")))
-            # print(self._get_avg(self.db_data[Device.LOADR]))
-            # print(self._get_avg(self.db_data[Device.LOADB]))
-            # print(self._get_avg(self.db_data[Device.LOADY]))
-            # print(self._get_avg(self.db_data[Device.LOADK]))
-            # print(p_import)
-            # print(p_store)
-            # print(deferables_supplied[0])
-            # print(deferables_supplied[1])
-            # print(deferables_supplied[2])
-            # print("end")
             return FullTick(
                 day=tick.day,
                 tick=tick.tick,
@@ -145,8 +124,8 @@ class MClient:
                 sell_price=tick.sell_price,
                 cost=0.0,
                 avg_pv_power=self._get_avg(self.db_data["pv_power"]),
-                storage_soc=float(self.db_data["soc"]),
-                avg_storage_power=self._get_avg(self.db_data["storage_power"]),
+                storage_soc=float(self.db_data["soc"] if "soc" in self.db_data else 0),
+                avg_storage_power=self._get_avg(self.db_data["storage_power"] if "storage_power" in self.db_data else [0]),
                 avg_import_export_power=self._get_avg(self._get_from_db_data("import_power")) + self._get_avg(self._get_from_db_data("export_power")),
                 avg_red_power=self._get_avg(self.db_data[Device.LOADR]),
                 avg_blue_power=self._get_avg(self.db_data[Device.LOADB]),
@@ -155,8 +134,8 @@ class MClient:
                 algo_import_power=p_import,
                 algo_store_power=p_store,
                 algo_blue_power=deferables_supplied[0],
-                algo_yellow_power=deferables_supplied[1],
-                algo_grey_power=deferables_supplied[2]
+                algo_yellow_power=deferables_supplied[2],
+                algo_grey_power=deferables_supplied[1]
             )
         except Exception as e:
             print(f"Failed to create object: {e}")

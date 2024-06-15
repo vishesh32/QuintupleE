@@ -1,4 +1,4 @@
-cd Software/server
-python3 main.py
-# cd Software/dashboard
-# npm run dev
+# cd Software/server
+# python3 main.py
+cd Software/dashboard
+npm run dev

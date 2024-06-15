@@ -27,10 +27,6 @@ export default function NavBar(){
                 setPage(Page.CONTROLS)
                 break;
             }
-            case '/settings': {
-                setPage(Page.SETTINGS)
-                break;
-            }
         }
     }, [])
 
@@ -42,7 +38,6 @@ export default function NavBar(){
                 <Link className={`${navLinkStyle}` + (page === Page.HOME? " border-white": " border-transparent")} href="/" onClick={(e)=>setPage(Page.HOME)} >Home</Link>
                 <Link className={`${navLinkStyle}` + (page === Page.HISTORY? " border-white": " border-transparent")} href="/history" onClick={(e)=>setPage(Page.HISTORY)} >Historical</Link>
                 <Link className={`${navLinkStyle}` + (page === Page.CONTROLS? " border-white": " border-transparent")} href="/controls" onClick={(e)=>setPage(Page.CONTROLS)} >Controls</Link>
-                <Link className={`${navLinkStyle}` + (page === Page.SETTINGS? " border-white": " border-transparent")} href="/settings" onClick={(e)=>setPage(Page.SETTINGS)} >Settings</Link>
             </div>
         </nav>
     );
