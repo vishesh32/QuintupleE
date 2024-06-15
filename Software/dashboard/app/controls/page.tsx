@@ -21,8 +21,10 @@ export default function ManualControl() {
   const [soc, setSoc] = useState<number>(0);
   const [socPower, setSocPower] = useState<number>(0);
   const [devices, setDevices] = useState<object[]>([]);
+  const [vBus, setVBus] = useState<number>(0);
 
   const [override, setOverride] = useState<boolean>(false);
+  const [forceRender, setForceRender] = useState<number>(0);
 
   const mClient = useRef<MQTTClient | undefined>(undefined);
 
@@ -35,7 +37,8 @@ export default function ManualControl() {
         setExportPower,
         setSoc,
         setSocPower,
-        setOverride
+        setOverride,
+        setVBus
       );
 
       setDevices(mClient.current.devices);
@@ -58,8 +61,10 @@ export default function ManualControl() {
 
   useEffect(()=>{
     const intId = setInterval(()=>{
-      if(mClient.current) setDevices(mClient.current.devices);
-      console.log("updating devices");
+      if(mClient.current) {
+        setDevices(mClient.current.devices);
+        setForceRender((prev)=>(prev+1)%2);
+      }
     }, 5000)
 
     return ()=>clearInterval(intId);
@@ -67,7 +72,9 @@ export default function ManualControl() {
 
   return (
     <div>
-      {devices.map((val, i)=><Connect key={i} data={val} />)}
+      <div className="flex justify-center flex-row">
+        {devices.map((val, i)=><Connect key={i + forceRender} data={val} />)}
+      </div>
       <div className="w-full flex flex-row gap-2 flex-wrap justify-center p-5 pt-8">
         <button
           onClick={handleOverrideClick}
@@ -93,6 +100,13 @@ export default function ManualControl() {
           onChange={(e) => setInIrr(e.target.value)}
           placeholder={"Enter a value"}
           ></InputCard>
+
+        <Card
+            className="w-[280px]"
+            top={<p>V Bus</p>}
+            middle={<p>{vBus}V</p>}
+            bottom={<p>Measured From The External Grid</p>}
+          />
 
           <Card
             className=""

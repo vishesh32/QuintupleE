@@ -106,6 +106,9 @@ class MClient:
     def get_irradiance(self):
         self.check_msg()
         return self.irradiance
+    
+    def send_v_bus(self, v_bus):
+        self.client.publish(SERVER_TOPIC, json.dumps({"target": DEVICE.STORAGE, "payload": {"type": "v-bus", "value": v_bus}}))
 
     # percentage of the capacitor
     def send_soc(self, soc):

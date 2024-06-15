@@ -21,6 +21,7 @@ class MQTTClient {
     setSoc: any,
     setSocPower: any,
     setOverride: any,
+    setVBus: any,
     address: string = "35.178.119.19",
     port: number = 9001
   ) {
@@ -91,7 +92,8 @@ class MQTTClient {
           case Device.STORAGE: {
             if (msgObj.payload.type == "soc")
               setSoc(msgObj.payload.value.toFixed(prec));
-            else setSocPower(msgObj.payload.value.toFixed(prec));
+            else if(msgObj.payload.type == "power") setSocPower(msgObj.payload.value.toFixed(prec));
+            else setVBus(msgObj.payload.value.toFixed(prec));
             break;
           }
         }
@@ -112,7 +114,7 @@ class MQTTClient {
         }
       }
 
-      console.log(this.devices);
+      // console.log(this.devices);
     });
 
     this.client.subscribe(serverTopic, (err: any) => {

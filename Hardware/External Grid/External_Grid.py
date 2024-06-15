@@ -1,10 +1,10 @@
 from machine import Pin, I2C, ADC, PWM, Timer
-import machine
 import time
 from mqtt_client import MClient, DEVICE
-
+import machine
 
 try:
+
     client = MClient(DEVICE.EXTERNAL_GRID)
 
     # Set up some pin allocations for the Analogues and switches
@@ -34,12 +34,14 @@ try:
     v_pot_index = 0
 
     # Gains etc for the PID controller
-    i_ref = 0  # Voltage reference for the CL modes
-    i_err = 0  # Voltage error
-    i_err_int = 0  # Voltage error integral
-    i_pi_out = 0  # Output of the voltage PI controller
-    kp = 100  # Boost Proportional Gain
-    ki = 300  # Boost Integral Gain
+    vb_ref = 0  # Voltage reference for the CL modes
+    vb_err = 0  # Voltage error
+    vb_err_int = 0  # Voltage error integral
+    vb_pi_out = 0  # Output of the voltage PI controller
+
+
+    kp = 150  # Boost Proportional Gain
+    ki = 10  # Boost Integral Gain
 
     # Basic signals to control logic flow
     global timer_elapsed
@@ -66,6 +68,7 @@ try:
         if vb < 5.9:
             pwm_ref = saturate(pwm_ref + 10, max_pwm, min_pwm)
         return pwm_ref
+
 
     # Initialize energy
     energy = 0
@@ -104,8 +107,6 @@ try:
             return float(reg_value) * 0.004
 
         def configure(self):
-            # ina_i2c.writeto_mem(self.address, self.REG_CONFIG, b'\x01\x9F') # PG = 1
-            # ina_i2c.writeto_mem(self.address, self.REG_CONFIG, b'\x09\x9F') # PG = /2
             ina_i2c.writeto_mem(self.address, self.REG_CONFIG, b'\x19\x9F')  # PG = /8
             ina_i2c.writeto_mem(self.address, self.REG_CALIBRATION, b'\x00\x00')
 
@@ -118,7 +119,7 @@ try:
             first_run = 0
 
             # This starts a 1kHz timer which we use to control the execution of the control loops and sampling
-            loop_timer = Timer(mode=Timer.PERIODIC, freq=1000, callback=tick)
+            loop_timer = Timer(mode=Timer.PERIODIC, freq=2000, callback=tick)
             energy_start_time = time.time()
 
         # If the timer has elapsed it will execute some functions, otherwise it skips everything and repeats until the timer elapses
@@ -134,73 +135,63 @@ try:
             vpot = sum(v_pot_filt) / 100  # Actual reading used is the average of the last 100 readings
 
             Vshunt = ina.vshunt()
-            CL = OL_CL_pin.value()  # Are we in closed or open loop mode
-            BU = BU_BO_pin.value()  # Are we in buck or boost mode?
 
             # New min and max PWM limits and we use the measured current directly
-            min_pwm = 0
-            max_pwm = 64536
             iL = Vshunt / SHUNT_OHMS
             # pwm_ref = saturate(65536-(int((vpot/3.3)*65536)),max_pwm,min_pwm) # convert the pot value to a PWM value for use later
             pwm_ref = vb_at_bus_voltage(vb, pwm_ref)
-
             # Energy calculation integration over 5 seconds
-            power = (va if iL < 0 else vb) * abs(iL)  # Power in watts
-            energy_accumulator += power / 1000.0  # Power in mW, loop runs every 1 ms
+            power = (va if iL < 0 else vb) * iL  # Power in watts
+            #energy_accumulator += power / 1000.0  # Power in mW, loop runs every 1 ms
+            
+            vb_ref = saturate(6.15, 6.2, 6.1)
+            vb_err = vb_ref - vb  # calculate the error in voltage
+            vb_err_int = vb_err_int + vb_err  # add it to the integral error
+            vb_err_int = saturate(vb_err_int, 10000, -10000)  # saturate the integral error
+            vb_pi_out = (kp * vb_err) + (ki * vb_err_int)  # Calculate a PI controller output
 
+            i_err_int = 0 #reset integrator
+            
+            if iL > 2: # Current limiting function
+                pwm_out = pwm_out - 5 # if there is too much current, knock down the duty cycle
+                OC = 1 # Set the OC flag
+                pwm_out = saturate(pwm_out, pwm_ref, min_pwm)
+            elif iL < -2:
+                pwm_out = pwm_out + 5 # We are now below the current limit so bring the duty back up
+                OC = 1 # Reset the OC flag
+                pwm_out = saturate(pwm_out, max_pwm, pwm_ref)
+            else:
+                pwm_out = pwm_ref
+                OC = 0
+                pwm_out = saturate(pwm_out, pwm_ref, min_pwm)
+                
+            pwm_out = vb_pi_out
+            duty = int(65536 - pwm_out)  # Invert because reasons
+            duty = saturate(duty, max_pwm, min_pwm)
+            pwm.duty_u16(duty)  # Send the output of the PI controller out as PWM
+            
+
+            # Keep a count of how many times we have executed and reset the timer so we can go back to waiting
+            count = count + 1
+            timer_elapsed = 0
+            
             if time.time() - energy_start_time >= 5:
                 energy = energy_accumulator  # Total energy in mWs over the 5-second period
                 energy_accumulator = 0
                 energy_start_time = time.time()
 
-            if CL != 1:  # Buck-OL Open loop so just limit the current but otherwise pass through the reference directly as a duty cycle
-                i_err_int = 0  # reset integrator
-
-                if iL > 2:  # Current limiting function
-                    pwm_out = pwm_out - 10  # if there is too much current, knock down the duty cycle
-                    OC = 1  # Set the OC flag
-                    pwm_out = saturate(pwm_out, pwm_ref, min_pwm)
-                elif iL < -2:
-                    pwm_out = pwm_out + 10  # We are now below the current limit so bring the duty back up
-                    OC = 1  # Reset the OC flag
-                    pwm_out = saturate(pwm_out, max_pwm, pwm_ref)
-                else:
-                    pwm_out = pwm_ref
-                    OC = 0
-                    pwm_out = saturate(pwm_out, pwm_ref, min_pwm)
-
-                duty = 65536 - pwm_out  # Invert the PWM because thats how it needs to be output for a buck because of other inversions in the hardware
-                pwm.duty_u16(duty)  # now we output the pwm
-
-            else:  # Closed Loop Current Control
-                i_ref = saturate(vpot - 1.66, 1.5, -1.5)
-                i_err = i_ref - iL  # calculate the error in voltage
-                i_err_int = i_err_int + i_err  # add it to the integral error
-                i_err_int = saturate(i_err_int, 10000, -10000)  # saturate the integral error
-                i_pi_out = (kp * i_err) + (ki * i_err_int)  # Calculate a PI controller output
-
-                pwm_out = saturate(i_pi_out, max_pwm, min_pwm)  # Saturate that PI output
-                duty = int(65536 - pwm_out)  # Invert because reasons
-                pwm.duty_u16(duty)  # Send the output of the PI controller out as PWM
-
-            # Keep a count of how many times we have executed and reset the timer so we can go back to waiting
-            count = count + 1
-            timer_elapsed = 0
-
             # This set of prints executes every 100 loops by default and can be used to output debug or extra info over USB enable or disable lines as needed
-            if count > 100:
-                print("Va = {:.3f}".format(va))
-                print("Vb = {:.3f}".format(vb))
-                print("iL = {:.3f}".format(iL))
-                print("duty = {:d}".format(duty))
-                print("i_err = {:.3f}".format(i_err))
-                print("i_ref = {:.3f}".format(i_ref))
+            if count > 35:
+                client.send_v_bus(vb - 0.12)
+                print("Vb: {:.3f}".format(vb))
+                print(f"Power: {power}")
+                print("iL: {:.3f}".format(iL))
                 if iL < 0:
-                    print("Energy Supplied = {:.3f} J".format(energy))
-                    #client.send_external_grid(None, energy)    
+                    print("Po: {:.3f}".format(power))
+                    client.send_external_grid(power, None)
                 else:
-                    print("Energy Imported = {:.3f} J".format(energy))
-                    #client.send_external_grid(None, 0)
+                    print("Pi: {:.3f}".format(power))
+                    client.send_external_grid(None, power)
                 count = 0
 except Exception as e:
     machine.reset()

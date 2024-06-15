@@ -73,7 +73,7 @@ export default function Home() {
 
   return (
     <main key={forceRender} className="mx-20 my-5">
-      <div className="flex gap-2">
+      <div className="flex gap-3">
         <SmallCard
           className="ml-auto"
           top={<p>Day and Tick</p>}

@@ -98,7 +98,7 @@ try:
         while True:
             try:
                 P_desired = float(input("Enter the desired power output in Watts: "))
-                if abs(P_desired) <= 2:  # Limiting the absolute value of input to <= 4
+                if abs(P_desired) <= 3:  # Limiting the absolute value of input to <= 4
                     return P_desired
                 else:
                     print("Power output must be within +-3 Watts of the desired value.")
@@ -165,7 +165,7 @@ try:
     ### Test above
 
     # Get initial desired power output
-    P_desired = get_desired_power()
+    P_desired = 0
     update_pid_gains(P_desired)
 
     # Initialize the start time
