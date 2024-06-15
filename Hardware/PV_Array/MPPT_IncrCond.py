@@ -120,7 +120,6 @@ step = 1000
 duty = int(65536 - max_pwm)
 pwm.duty_u16(duty)
 print(f"Initialising duty at: {duty}")
-utime.sleep_ms(5000)
 
 prev_power = 0
 
@@ -209,10 +208,9 @@ with open('/Data.csv', 'w') as file:
             timer_elapsed = 0
 
             # This set of prints executes every 100 loops by default and can be used to output debug or extra info over USB enable or disable lines as needed
-            if count > 1:
+            if count > 20:
                 elapsed_time = (utime.ticks_ms() - start_time)
                 
                 print(f"Time = {elapsed_time}s, Po = {output_power:.5f}")
                 file.write(f"{elapsed_time:.2f},{output_power:.5f}\n")
                 count = 0
-

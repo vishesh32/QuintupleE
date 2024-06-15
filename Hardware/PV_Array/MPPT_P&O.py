@@ -158,4 +158,3 @@ with open('/Data.csv', 'w') as file:
                 print(f"Time = {elapsed_time}s, Po = {output_power:.5f}")
                 file.write(f"{elapsed_time:.2f},{output_power:.5f}\n")
                 count = 0
-

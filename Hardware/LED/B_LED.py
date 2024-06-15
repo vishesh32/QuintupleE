@@ -3,7 +3,7 @@ from PID import PID
 from mqtt_client import MClient
 from mqtt_client import DEVICE
 
-client = MClient(DEVICE.LOADK)
+client = MClient(DEVICE.LOADB)
 
 vret_pin = ADC(Pin(26))
 vout_pin = ADC(Pin(28))
@@ -67,4 +67,3 @@ while True:
         client.send_load_power(power)
         count = 0
         pid.setpoint = setpoint
-

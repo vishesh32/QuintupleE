@@ -16,13 +16,13 @@ pwm_out = min_pwm
 
 # Constants
 SHUNT_OHMS = 0.10
-MPP = 4.2
+MPP = 0
 
 # Initialize variables
-irradiance = 0
+irradiance = 100
 power_sum = 0
 sample_count = 0
-P_desired = MPP * irradiance
+P_desired = MPP
 
 # Basic signals to control logic flow
 global timer_elapsed
@@ -85,11 +85,22 @@ class ina219:
 def saturate(signal, upper, lower): 
     return max(min(signal, upper), lower)
 
-
 # This is the function executed by the loop timer, it simply sets a flag which is used to control the main loop
 def tick(t): 
     global timer_elapsed
     timer_elapsed = 1
+
+# Function to get user input for desired power output
+def get_irradiance():
+    while True:
+        try:
+            Irradiance = float(input("Enter irradiance as %: "))
+            if 0 <= Irradiance <= 100:  # Limiting the value of input to between 0 and 100
+                return Irradiance
+            else:
+                print("Irradiance % is not valid")
+        except ValueError:
+            print("Invalid input. Please enter a numeric value.")
 
 # PID Controller update
 def update_pid(error):
@@ -113,7 +124,7 @@ while True:
         ina.configure()
         first_run = 0
         # This starts a 1kHz timer which we use to control the execution of the control loops and sampling
-        loop_timer = Timer(mode=Timer.PERIODIC, freq=1000, callback=tick)        
+        loop_timer = Timer(mode=Timer.PERIODIC, freq=2000, callback=tick)        
 
     if timer_elapsed == 1:  # This is executed at 1kHz
         timer_elapsed = 0  # Reset the timer flag
@@ -138,33 +149,18 @@ while True:
         duty = int(65536-pwm_out) # Invert because reasons
         pwm.duty_u16(duty)
 
-        utime.sleep_ms(5)
-
         # Accumulate power for averaging
         power_sum += power_output
         sample_count += 1
 
         count += 1
 
-        # every 125ms
-        if count % 25 == 0:
-            # Print data in consistent format
-            print(f"P: {power_output:.2f} W")
-            irradiance = client.get_irradiance()
-
-
-
-        # send irradiance
-        # every 1s
-        if count % 200:
-            client.send_pv_power(power_output)
-            
-
         # every 10s
         # Check for new desired power output input and print average power every 5 seconds
-        if count >= 1000:
-            average_power = power_sum / sample_count
-            print(f"Average Power over last 5 seconds: {average_power:.2f} W")
+        if count >= 100:
+            irradiance = client.get_irradiance()
+            client.send_pv_power(power_output)
+            
             P_desired = round ((irradiance * MPP) / 100, 2)
             power_sum = 0  # Reset power sum
             sample_count = 0  # Reset sample count

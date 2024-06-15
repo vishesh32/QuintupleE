@@ -3,7 +3,7 @@ from PID import PID
 from mqtt_client import MClient
 from mqtt_client import DEVICE
 
-client = MClient(DEVICE.LOADR)
+client = MClient(DEVICE.LOADY)
 
 vret_pin = ADC(Pin(26))
 vout_pin = ADC(Pin(28))
@@ -61,11 +61,6 @@ while True:
         print("Vout = {:.3f}".format(vout))
         print("Vret = {:.3f}".format(vret))
         print("Duty = {:.0f}".format(pwm_out))
-
-
-        # show on ui
-        print("Output Current = {:.3f}".format(i_shunt))
-        client.send_shunt_current(i_shunt)
 
         # store this
         print("Output Power = {:.3f}".format(power))

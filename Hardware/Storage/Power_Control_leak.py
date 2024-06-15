@@ -96,7 +96,7 @@ def get_desired_power():
     while True:
         try:
             P_desired = float(input("Enter the desired power output in Watts: "))
-            if abs(P_desired) <= 2:  # Limiting the absolute value of input to <= 4
+            if abs(P_desired) <= 3:  # Limiting the absolute value of input to <= 4
                 return P_desired
             else:
                 print("Power output must be within +-3 Watts of the desired value.")

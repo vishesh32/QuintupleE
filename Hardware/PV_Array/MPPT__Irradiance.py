@@ -13,13 +13,13 @@ pwm_out = min_pwm
 
 # Constants
 SHUNT_OHMS = 0.10
-MPP = 2.4
+MPP = 3
 
 # Initialize variables
 irradiance = 100
 power_sum = 0
 sample_count = 0
-P_desired = MPP
+P_desired = MPP * irradiance / 100
 
 # Basic signals to control logic flow
 global timer_elapsed
@@ -87,18 +87,6 @@ def tick(t):
     global timer_elapsed
     timer_elapsed = 1
 
-# Function to get user input for desired power output
-def get_irradiance():
-    while True:
-        try:
-            Irradiance = float(input("Enter irradiance as %: "))
-            if 0 <= Irradiance <= 100:  # Limiting the value of input to between 0 and 100
-                return Irradiance
-            else:
-                print("Irradiance % is not valid")
-        except ValueError:
-            print("Invalid input. Please enter a numeric value.")
-
 # PID Controller update
 def update_pid(error):
     global v_err_int, previous_v_err
@@ -146,29 +134,21 @@ while True:
         duty = int(65536-pwm_out) # Invert because reasons
         pwm.duty_u16(duty)
 
-        utime.sleep_ms(5)
+        #utime.sleep_ms(5)
 
         # Accumulate power for averaging
         power_sum += power_output
         sample_count += 1
 
         count += 1
-
-        if count % 25 == 0:
-            # Print data in consistent format
-            print(f"P: {power_output:.2f} W")
-
-        if count % 1000 == 0:
-            # Print data in consistent format
-            print("5 seconds mark")
-
+        
+        # every 10s
         # Check for new desired power output input and print average power every 5 seconds
-        if count >= 2000:
+        if count >= 100:
+            print(f"P: {power_output:.2f} W")
             average_power = power_sum / sample_count
-            print(f"Average Power over last 5 seconds: {average_power:.2f} W")
-            P_desired = round ((get_irradiance() * MPP) / 100, 2)
+            #print(f"Average Power over last 5 seconds: {average_power:.2f} W")
+            P_desired = round ((irradiance * MPP) / 100, 2)
             power_sum = 0  # Reset power sum
             sample_count = 0  # Reset sample count
             count = 0
-
-

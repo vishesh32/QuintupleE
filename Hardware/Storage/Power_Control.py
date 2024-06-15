@@ -14,7 +14,7 @@ max_pwm = 42300
 pwm_out = min_pwm
 duty = 0
 
-C = 0.25  # Capacitance in Farads
+C = 0.5  # Capacitance in Farads
 SHUNT_OHMS = 0.10
 max_capacity = 0.5 * C * 16 * 16
 min_capacity = 0.5 * C * 7 * 7
@@ -93,7 +93,7 @@ def get_desired_power():
     while True:
         try:
             P_desired = float(input("Enter the desired power output in Watts: "))
-            if abs(P_desired) <= 2:  # Limiting the absolute value of input to <= 4
+            if abs(P_desired) <= 3:  # Limiting the absolute value of input to <= 4
                 return P_desired
             else:
                 print("Power output must be within +-3 Watts of the desired value.")
@@ -244,4 +244,3 @@ while True:
             power_sum = 0  # Reset power sum
             sample_count = 0  # Reset sample count
             count = 0
-
