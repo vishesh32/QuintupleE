@@ -58,7 +58,7 @@ const AllGraphs: GraphData[] = [
         title: "SOC, Real and Expected Import Power",
         xValue: x,
         unitData1: [AllVars.soc],
-        unitData2: [AllVars.real_import_power, AllVars.algo_import_power],
+        unitData2: [AllVars.real_storage_power, AllVars.algo_storage_power],
         data: [],
     },
     {
@@ -114,6 +114,13 @@ var LiveGraphs: GraphData[] = [
         title: "SOC",
         xValue: x,
         unitData1: [AllVars.soc],
+        unitData2: [],
+        data: [],
+    },
+    {
+        title: "Demands",
+        xValue: x,
+        unitData1: [AllVars.real_instant_demand, AllVars.real_blue_def, AllVars.real_grey_def, AllVars.real_yellow_def],
         unitData2: [],
         data: [],
     },

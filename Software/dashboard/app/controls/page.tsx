@@ -5,6 +5,7 @@ import Card from "@/components/Card/SmallCard";
 import InputCard from "@/components/Card/InputCard";
 import { MQTTClient, Device } from "@/helpers/mqtt_client";
 import Graph from "../../components/Graph/Graph";
+import Connect from "@/components/Connect/Connect";
 
 const inputClass =
   "ml-auto font-normal text-2xl outline-none border-2 rounded-md text-[#828282] pl-2 pr-2";
@@ -19,13 +20,14 @@ export default function ManualControl() {
   const [exportPower, setExportPower] = useState<number>(0);
   const [soc, setSoc] = useState<number>(0);
   const [socPower, setSocPower] = useState<number>(0);
+  const [devices, setDevices] = useState<object[]>([]);
 
   const [override, setOverride] = useState<boolean>(false);
 
   const mClient = useRef<MQTTClient | undefined>(undefined);
 
   useEffect(() => {
-    if (mClient.current === undefined)
+    if (mClient.current === undefined){
       mClient.current = new MQTTClient(
         setCurrentPV,
         setLoadPowers,
@@ -35,6 +37,9 @@ export default function ManualControl() {
         setSocPower,
         setOverride
       );
+
+      setDevices(mClient.current.devices);
+    }
 
     // check whether the server is set to manual or use the algorithm
     mClient.current?.ask_override_status();
@@ -51,8 +56,18 @@ export default function ManualControl() {
     mClient.current?.send_override_status(!tmp);
   };
 
+  useEffect(()=>{
+    const intId = setInterval(()=>{
+      if(mClient.current) setDevices(mClient.current.devices);
+      console.log("updating devices");
+    }, 5000)
+
+    return ()=>clearInterval(intId);
+  })
+
   return (
     <div>
+      {devices.map((val, i)=><Connect key={i} data={val} />)}
       <div className="w-full flex flex-row gap-2 flex-wrap justify-center p-5 pt-8">
         <button
           onClick={handleOverrideClick}

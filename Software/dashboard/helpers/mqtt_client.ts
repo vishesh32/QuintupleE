@@ -11,7 +11,7 @@ class MQTTClient {
   private client: any;
   public pvArrayPower: number = 0;
   public loadPowers: number[] = [0, 0, 0, 0];
-  public devices: any = {};
+  public devices: ({name: string, lastHeard: number})[] = [];
 
   constructor(
     setCurrentPV: any,
@@ -25,9 +25,9 @@ class MQTTClient {
     port: number = 9001
   ) {
     console.log("running constructor")
-    if(this.devices == undefined) {
+    if(this.devices.length == 0) {
       for(let [key, val] of Object.entries(Device)) {
-        this.devices = {[val]: 0, ...this.devices};
+        this.devices.push({name: val, lastHeard: 0})
       }
       // console.log(this.devices);
     }
@@ -45,14 +45,10 @@ class MQTTClient {
         // send data to server
         switch (msgObj.target) {
           case Device.PV_ARRAY: {
-            // console.log("PV Array Power: ", msgObj.payload);
-            // this.pvArrayPower = msgObj.payload.toFixed(prec);
             setCurrentPV(msgObj.payload.toFixed(prec));
-            // console.log("PV Array Power: ", this.pvArrayPower);
             break;
           }
           case Device.LOADR: {
-            // this.loadPowers[0] = msgObj.payload.toFixed(prec);
             setLoadPowers((prev: number[]) => {
               const old = [...prev];
               old[0] = msgObj.payload.toFixed(prec);
@@ -61,7 +57,6 @@ class MQTTClient {
             break;
           }
           case Device.LOADB: {
-            // this.loadPowers[1] = msgObj.payload.toFixed(prec);
             setLoadPowers((prev: number[]) => {
               const old = [...prev];
               old[1] = msgObj.payload.toFixed(prec);
@@ -70,7 +65,6 @@ class MQTTClient {
             break;
           }
           case Device.LOADY: {
-            // this.loadPowers[2] = msgObj.payload.toFixed(prec);
             setLoadPowers((prev: number[]) => {
               const old = [...prev];
               old[2] = msgObj.payload.toFixed(prec);
@@ -79,7 +73,6 @@ class MQTTClient {
             break;
           }
           case Device.LOADK: {
-            // this.loadPowers[3] = msgObj.payload.toFixed(prec);
             setLoadPowers((prev: number[]) => {
               const old = [...prev];
               old[3] = msgObj.payload.toFixed(prec);
@@ -93,11 +86,9 @@ class MQTTClient {
               setImportPower(msgObj.payload.import_power.toFixed(prec));
             else if (msgObj.payload.export_power)
               setExportPower(msgObj.payload.export_power.toFixed(prec));
-            // console.log(msgObj.payload.import_power)
             break;
           }
           case Device.STORAGE: {
-            // console.log(msgObj.payload)
             if (msgObj.payload.type == "soc")
               setSoc(msgObj.payload.value.toFixed(prec));
             else setSocPower(msgObj.payload.value.toFixed(prec));
@@ -113,6 +104,15 @@ class MQTTClient {
           setOverride(msgObj.payload);
         }
       }
+
+      for(let i = 0; i < this.devices.length; i++) {
+        if(this.devices[i].name == msgObj.target) {
+          this.devices[i].lastHeard = Date.now();
+          break;
+        }
+      }
+
+      console.log(this.devices);
     });
 
     this.client.subscribe(serverTopic, (err: any) => {
