@@ -36,6 +36,12 @@ function FormatString(s: string){
     return s.split("_").map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
 }
 
+interface LiveData {
+    cost: number,
+    buy: number,
+    sell: number,
+}
+
 
 export { Variable, FormatString, GraphType }
-export type { GraphData }
+export type { GraphData, LiveData }

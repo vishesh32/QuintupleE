@@ -11,6 +11,7 @@ class MQTTClient {
   private client: any;
   public pvArrayPower: number = 0;
   public loadPowers: number[] = [0, 0, 0, 0];
+  public devices: any = {};
 
   constructor(
     setCurrentPV: any,
@@ -23,6 +24,14 @@ class MQTTClient {
     address: string = "35.178.119.19",
     port: number = 9001
   ) {
+    console.log("running constructor")
+    if(this.devices == undefined) {
+      for(let [key, val] of Object.entries(Device)) {
+        this.devices = {[val]: 0, ...this.devices};
+      }
+      // console.log(this.devices);
+    }
+
     this.client = mqtt.connect(`ws://${address}:${port}`);
     this.client.on("connect", () => console.log("Connected to MQTT Broker"));
     this.client.on("error", (err: any) => console.error(err));

@@ -17,9 +17,9 @@ export default function InputCard({
   className?: string;
   override: boolean;
   name: string;
-  onKeyDown: ()=>void;
-  value: any;
-  onChange: (e: any)=>void;
+  onKeyDown: (e:any)=>void;
+  value?: any;
+  onChange?: (e: any)=>void;
   placeholder: string;
 }) {
   return (
@@ -34,7 +34,7 @@ export default function InputCard({
           placeholder={placeholder}
           onKeyDown={(e: any) => {
             if (e.key === "Enter") {
-              onKeyDown();
+              onKeyDown(e);
             }
           }}
           value={value}

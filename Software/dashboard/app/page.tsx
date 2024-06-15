@@ -2,15 +2,17 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { getDayAndTick, getValuesOnTick } from "./actions";
-import { LiveGraphs } from "@/helpers/graph_data";
+import { LiveGraphs, AllVars, AllGraphs } from "@/helpers/graph_data";
 import { getYValues } from "@/helpers/graph_funcs";
 import Graph from "@/components/Graph/Graph";
-import { GraphData } from "@/helpers/graph_types";
+import { GraphData, LiveData, Variable } from "@/helpers/graph_types";
+import SmallCard from '@/components/Card/SmallCard';
 
 export default function Home() {
   const [day, setDay] = useState(0);
   const [tick, setTick] = useState(0);
-  const [graphData, setGraphData] = useState<GraphData[]>(LiveGraphs);
+  const [graphData, setGraphData] = useState<GraphData[]>(AllGraphs);
+  const [liveData, setLiveData] = useState<LiveData>({cost: 0, buy: 0, sell: 0})
   const [forceRender, setForceRender] = useState(0);
 
   const changeGraphData = async (prevDay: number, prevTick: number) => {
@@ -19,11 +21,11 @@ export default function Home() {
     setDay(nextDay);
     setTick(nextTick);
 
-    console.log(prevDay, prevTick);
+    // console.log(prevDay, prevTick);
 
     let tmpGraphData = [...graphData];
 
-    console.log(day, tick);
+    // console.log(day, tick);
 
     for (let graph of tmpGraphData) {
       const yValues = getYValues(graph);
@@ -35,8 +37,18 @@ export default function Home() {
       }
     }
 
+    // fetch cost, buy and sell prices
+    let data = await getValuesOnTick({[AllVars.cost.yValue]: 1, [AllVars.buy.yValue]: 1, [AllVars.sell.yValue]: 1}, nextDay, nextTick); 
+    if (data){
+      setLiveData({
+        cost: data[AllVars.cost.yValue],
+        buy: data[AllVars.buy.yValue],
+        sell: data[AllVars.sell.yValue]
+      });
+    }
+
     setGraphData([...tmpGraphData]);
-    setGraphData(tmpGraphData);
+    // setGraphData(tmpGraphData);
     setForceRender((forceRender + 1)%2);
 
     console.log(graphData);
@@ -60,10 +72,27 @@ export default function Home() {
   }, [tick, day, graphData])
 
   return (
-    <main key={forceRender} className="w-full mt-6 grid gap-5 2xl:grid-cols-2 px-8">
-      {graphData.map((data, i) => (
-        <Graph key={i} data={data} animation={false} />
-      ))}
+    <main key={forceRender} className="mx-20 my-5">
+      <div className="flex gap-2">
+        <SmallCard
+          className="ml-auto"
+          top={<p>Day and Tick</p>}
+          middle={<p>Tick: {tick}</p>}
+          bottom={<p>Day: {day}</p>}
+          />
+
+        <SmallCard
+          className="ml-auto"
+          top={<p>Cost</p>}
+          middle={<p>{liveData.cost} ¢</p>}
+          bottom={<p>Buy Price: {liveData.buy} ¢/J | Sell Price: {liveData.sell} ¢/J </p>}
+          />
+      </div>
+      <div className="w-full mt-6 grid gap-5 2xl:grid-cols-2">
+        {graphData.map((data, i) => (
+          <Graph key={i} data={data} animation={false} />
+        ))}
+      </div>
     </main>
   );
 }
