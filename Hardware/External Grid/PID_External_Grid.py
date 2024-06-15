@@ -2,7 +2,7 @@ from machine import Pin, I2C, ADC, PWM, Timer
 import time
 from mqtt_client import MClient, DEVICE
 
-client = MClient(DEVICE.EXTERNAL_GRID)
+#client = MClient(DEVICE.EXTERNAL_GRID)
 
 # Set up some pin allocations for the Analogues and switches
 va_pin = ADC(Pin(28))
@@ -37,8 +37,8 @@ vb_err_int = 0  # Voltage error integral
 vb_pi_out = 0  # Output of the voltage PI controller
 
 
-kp = 10  # Boost Proportional Gain
-ki = 1  # Boost Integral Gain
+kp = 150  # Boost Proportional Gain
+ki = 10  # Boost Integral Gain
 
 # Basic signals to control logic flow
 global timer_elapsed
@@ -104,8 +104,6 @@ class INA219:
         return float(reg_value) * 0.004
 
     def configure(self):
-        # ina_i2c.writeto_mem(self.address, self.REG_CONFIG, b'\x01\x9F') # PG = 1
-        # ina_i2c.writeto_mem(self.address, self.REG_CONFIG, b'\x09\x9F') # PG = /2
         ina_i2c.writeto_mem(self.address, self.REG_CONFIG, b'\x19\x9F')  # PG = /8
         ina_i2c.writeto_mem(self.address, self.REG_CALIBRATION, b'\x00\x00')
 
@@ -140,8 +138,8 @@ while True:
         # pwm_ref = saturate(65536-(int((vpot/3.3)*65536)),max_pwm,min_pwm) # convert the pot value to a PWM value for use later
         pwm_ref = vb_at_bus_voltage(vb, pwm_ref)
         # Energy calculation integration over 5 seconds
-        power = (va if iL < 0 else vb) * abs(iL)  # Power in watts
-        energy_accumulator += power / 1000.0  # Power in mW, loop runs every 1 ms
+        power = (va if iL < 0 else vb) * iL  # Power in watts
+        #energy_accumulator += power / 1000.0  # Power in mW, loop runs every 1 ms
         
         vb_ref = saturate(6.15, 6.2, 6.1)
         vb_err = vb_ref - vb  # calculate the error in voltage
@@ -181,13 +179,13 @@ while True:
 
         # This set of prints executes every 100 loops by default and can be used to output debug or extra info over USB enable or disable lines as needed
         if count > 35:
-            #print("Vb: {:.3f}".format(vb))
-            #print("duty: {:d}".format(duty))
-            #print("iL: {:.3f}".format(iL))
+            print("Vb: {:.3f}".format(vb))
+            print(f"Power: {power}")
+            print("iL: {:.3f}".format(iL))
             if iL < 0:
-                #print("Supplied: {:.3f}".format(energy))
-                client.send_external_grid(None, energy)
+                print("Po: {:.3f}".format(power))
+                #client.send_external_grid(power, None)
             else:
-                #print("Imported: {:.3f}".format(energy))
-                client.send_external_grid(None, 0)
+                print("Pi: {:.3f}".format(power))
+                #client.send_external_grid(None, power)
             count = 0

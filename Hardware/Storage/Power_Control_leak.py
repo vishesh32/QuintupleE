@@ -5,6 +5,7 @@ from mqtt_client import MClient, DEVICE
 
 client = MClient(DEVICE.STORAGE)
 
+
 # Initialization
 va_pin = ADC(Pin(28))
 ina_i2c = I2C(0, scl=Pin(1), sda=Pin(0), freq=2400000)
@@ -16,7 +17,7 @@ max_pwm = 42300
 pwm_out = min_pwm
 duty = 0
 
-C = 0.25  # Capacitance in Farads
+C = 0.5  # Capacitance in Farads
 SHUNT_OHMS = 0.10
 max_capacity = 0.5 * C * 16 * 16
 min_capacity = 0.5 * C * 7 * 7
@@ -29,25 +30,16 @@ first_run = 1
 
 # PID Gains for different power ranges
 pid_gains = {
-    "0-1": {"kp": 50, "ki": 5, "kd": 10},    # Good enough
-    "1-2": {"kp": 25, "ki": 5, "kd": 10},    # Test
-    "2-3": {"kp": 10, "ki": 5, "kd": 10},    # Test
+    "0-1": {"kp": 50, "ki": 5, "kd": 10},	# Good enough
+    "1-2": {"kp": 25, "ki": 5, "kd": 10},	# Test
+    "2-3": {"kp": 10, "ki": 5, "kd": 10},	# Test
 }
 
-# PID Gains for SoC control
-soc_pid_gains = {
-    "default": {"kp": 1, "ki": 0, "kd": 0}  # Adjust these gains as needed
-}
 
 # Initial PID Gains
 kp = pid_gains["0-1"]["kp"]
 ki = pid_gains["0-1"]["ki"]
 kd = pid_gains["0-1"]["kd"]
-
-# Initial SoC PID Gains
-soc_kp = soc_pid_gains["default"]["kp"]
-soc_ki = soc_pid_gains["default"]["ki"]
-soc_kd = soc_pid_gains["default"]["kd"]
 
 # Control variables
 v_err_int = 0
@@ -55,28 +47,16 @@ previous_v_err = 0
 integral_min = -5000  # Minimum integral value
 integral_max = 5000   # Maximum integral value
 
-# Initialize the start time for power averaging
-power_sum = 0
-sample_count = 0
-soc = 0
-previous_soc = 0
-
-soc_err_int = 0
-previous_soc_err = 0
-soc_integral_min = -5000  # Minimum integral value for SoC PID
-soc_integral_max = 5000   # Maximum integral value for SoC PID
-
 # Saturate function
 def saturate(signal, upper, lower): 
     return max(min(signal, upper), lower)
 
-# Timer callback function
+# This is the function executed by the loop timer, it simply sets a flag which is used to control the main loop
 def tick(t): 
     global timer_elapsed
     timer_elapsed = 1
 
-# Class for INA219 current sensor
-class ina219:
+class ina219: 
     # Register Locations
     REG_CONFIG = 0x00
     REG_SHUNTVOLTAGE = 0x01
@@ -111,7 +91,6 @@ class ina219:
         ina_i2c.writeto_mem(self.address, self.REG_CONFIG, b'\x19\x9F') # PG = /8
         ina_i2c.writeto_mem(self.address, self.REG_CALIBRATION, b'\x00\x00')
 
-
 # Function to get user input for desired power output
 def get_desired_power():
     while True:
@@ -141,14 +120,7 @@ def update_pid_gains(P_desired):
         gains = pid_gains["0-1"]
     kp, ki, kd = gains["kp"], gains["ki"], gains["kd"]
 
-# Function to update SoC PID gains
-def update_soc_pid_gains():
-    global soc_kp, soc_ki, soc_kd
-    # You can define different SoC PID gains here based on your requirements
-    soc_kp, soc_ki, soc_kd = soc_pid_gains["default"]["kp"], soc_pid_gains["default"]["ki"], soc_pid_gains["default"]["kd"]
-
-# Function to calculate duty cycle from voltage using a quadratic equation
-def duty_from_voltage(voltage):
+def duty_from_voltage(voltage, min_pwm):
     # Coefficients of the quadratic equation
     a = 6e-9
     b = -3e-5
@@ -158,7 +130,7 @@ def duty_from_voltage(voltage):
     threshold_voltage = 7.3527
     
     if voltage < threshold_voltage:
-        return 9000
+        return min_pwm
     
     # Calculate the discriminant
     discriminant = b**2 - 4 * a * c
@@ -177,116 +149,114 @@ def duty_from_voltage(voltage):
     else:
         return x2
 
-# 1 second delay to let storage voltage stabilize
+# 1 second delay to let storage voltage stabilise
 utime.sleep_ms(1000)
 
-# Calculate initial voltage and duty cycle
 va = 1.017 * (12490 / 2490) * 3.3 * (va_pin.read_u16() / 65536)  # Va calculation
 initial_voltage = va
-print(f"Initial Va: {va}")
-initial_duty = duty_from_voltage(initial_voltage)  # Calculate initial duty cycle
+print(f"Va: {va}")
+initial_duty = duty_from_voltage(initial_voltage, min_pwm)  # Calculate initial duty cycle
 print(f"Initial Duty: {initial_duty}")
 duty = int(initial_duty)
 pwm.duty_u16(duty)
 
+### Test above
 
 # Get initial desired power output
-P_desired = 0
+P_desired = get_desired_power()
 update_pid_gains(P_desired)
 
-# Initialize INA219 and start the loop timer
-ina = ina219(SHUNT_OHMS, 64, 5)
-ina.configure()
-loop_timer = Timer(mode=Timer.PERIODIC, freq=2000, callback=tick)
+# Initialize the start time
+power_sum = 0
+sample_count = 0
+soc = 0
 
-# Main control loop
+previous_input = None  # Variable to store the previous input
+
 while True:
-    if timer_elapsed == 1:  # This is executed at 1kHz
-        timer_elapsed = 0  # Reset the timer flag
+    if first_run:
+        # for first run, set up the INA link and the loop timer settings
+        ina = ina219(SHUNT_OHMS, 64, 5)
+        ina.configure()
+        first_run = 0
+        # This starts a 1kHz timer which we use to control the execution of the control loops and sampling
+        loop_timer = Timer(mode=Timer.PERIODIC, freq=1000, callback=tick)        
         
+    if timer_elapsed == 1: # This is executed at 1kHz
+        timer_elapsed = 0  # Reset the timer flag
+
         va = 1.017 * (12490 / 2490) * 3.3 * (va_pin.read_u16() / 65536)  # Va calculation
         Vshunt = ina.vshunt()
         iL = -(Vshunt / SHUNT_OHMS)  # Invert the current sense for Boost
-        # Calculate power output
-        power_output = va * iL
 
         # Calculate stored energy
-        E_stored = round(0.5 * C * va**2 , 2)
-        # Calculate State of Charge (SoC)
-        soc = calculate_soc(E_stored)
+        E_stored = round(0.5 * C * va**2 , 1)
         
-        # Limit charging when battery is near full capacity
-        if soc >= 90 and P_desired >= 0:
-            P_desired = 0
-
-        # Limit discharging when battery is near empty
-        if soc <= 5 and P_desired < 0:
-                P_desired = 0
-
-
-        # Determine if we should switch to SoC control
+        # Calculate power output
+        power_output = va * iL
+        
         if P_desired == 0:
-            if previous_soc == 0:
-                previous_soc = soc
-            # SoC Control
-            soc_error = soc - previous_soc
-            soc_err_int += soc_error
-            soc_err_int = saturate(soc_err_int, soc_integral_max, soc_integral_min)
-            soc_err_deriv = soc_error - previous_soc_err
-            
-            # Calculate the SoC PID output
-            soc_pid_output = soc_kp * soc_error + soc_ki * soc_err_int + soc_kd * soc_err_deriv
-            
-            # Update duty cycle based on SoC PID output
-            duty += int(soc_pid_output)
-            duty = saturate(duty, max_pwm, min_pwm)
-            
-            # Update previous SoC error
-            previous_soc_err = soc_error
-            
-        else:
-            previous_soc = 0
-            # Power Control (as before)
-            error = P_desired - power_output
-            v_err_int += error
-            v_err_int = saturate(v_err_int, integral_max, integral_min)
-            v_err_deriv = error - previous_v_err
-            
-            # Calculate the PID output for power control
-            pid_output = kp * error + ki * v_err_int + kd * v_err_deriv
-            
-            # Update duty cycle based on power PID output
-            duty += int(pid_output)
-            duty = saturate(duty, max_pwm, min_pwm)
-            
-            # Update previous power error
-            previous_v_err = error
+            if 5 <= soc < 50:
+                P_desired = 0.05  # Leakage control for SoC between 5% and 50%
+            elif 50 <= soc < 70:
+                P_desired = 0.06  # Leakage control for SoC between 50% and 70%
+            elif 70 <= soc < 80:
+                P_desired = 0.065  # Leakage control for SoC between 50% and 70%
+            elif soc >= 80:
+                P_desired = 0.07  # Leakage control for SoC above 80%
+
+        elif P_desired > 0:
+            if soc >= 90:
+                P_desired = 0.07  # Limit charging when SoC is 90% or higher
+
+        elif P_desired < 0:
+            if soc <= 5:
+                P_desired = 0.05  # Limit discharging when SoC is 5% or lower
+                
+        # PID Control
+        error = P_desired - power_output
+        v_err_int += error  # Integrate the error
+        v_err_int = saturate(v_err_int, integral_max, integral_min)  # Clamp the integral term
+        v_err_deriv = error - previous_v_err  # Calculate the derivative of the error
         
+        # Calculate the PID output
+        pid_output = kp * error + ki * v_err_int + kd * v_err_deriv
+        
+        # Update the duty cycle
+        duty += int(pid_output)
+        duty = saturate(duty, max_pwm, min_pwm)
+
+        # Update the previous error
+        previous_v_err = error
+
         pwm.duty_u16(duty)
         utime.sleep_ms(5)
+        
+
+        # Calculate State of Charge (SoC)
+        soc = calculate_soc(E_stored)
         
         # Accumulate power for averaging
         power_sum += power_output
         sample_count += 1
         
-        count += 1
+        # Keep a count of how many times we have executed and reset the timer so we can go back to waiting
+        count = count + 1
+        timer_elapsed = 0
         
         if count % 25 == 0:
             # Print data in consistent format
-            print(f"P: {power_output:.2f}, SoC: {soc:.2f}, iL: {iL*1000:.2f}, T: {count//200}")
-        
+            print(f"SoC: {soc:.0f}")
+
         # Check for new desired power output input and print average power every 5 seconds
         if count >= 1000:
             average_power = power_sum / sample_count
             print(f"Average Power over last 5 seconds: {average_power:.2f} W")
-
-            P_desired = get_desired_power()
-            update_pid_gains(P_desired)
-
+            P_desired = client.get_desired_power()
+            update_pid_gains(P_desired)  # Update PID gains based on new desired power
             power_sum = 0  # Reset power sum
             sample_count = 0  # Reset sample count
             count = 0
 
             client.send_storage_power(average_power)
             client.send_soc(soc)
-

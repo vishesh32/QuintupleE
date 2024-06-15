@@ -94,6 +94,20 @@ class ina219:
         ina_i2c.writeto_mem(self.address, self.REG_CONFIG, b'\x19\x9F') # PG = /8
         ina_i2c.writeto_mem(self.address, self.REG_CALIBRATION, b'\x00\x00')
 
+# Function to wait until voltage stabilizes with averaging
+def wait_for_stability():
+    stable = False
+    samples = []
+    for _ in range(stability_samples):
+        current_va = va_pin.read_u16() / 65536 * 3.3
+        samples.append(current_va)
+        utime.sleep_ms(stability_wait_time // stability_samples)
+    avg_va = sum(samples) / len(samples)
+    max_diff = max(abs(v - avg_va) for v in samples)
+    if max_diff < stability_threshold:
+        stable = True
+    return stable
+
 # Function to get user input for desired power output
 def get_desired_power():
     while True:
@@ -121,6 +135,9 @@ def update_pid_gains(P_desired):
     else:
         gains = pid_gains["0-1"]
     kp, ki, kd = gains["kp"], gains["ki"], gains["kd"]
+
+
+### Test below
 
 
 def duty_from_voltage(voltage):
@@ -152,6 +169,9 @@ def duty_from_voltage(voltage):
     else:
         return x2
 
+# 1 second delay to let storage voltage stabilise
+utime.sleep_ms(1000)
+
 va = 1.017 * (12490 / 2490) * 3.3 * (va_pin.read_u16() / 65536)  # Va calculation
 initial_voltage = va
 print(f"Va: {va}")
@@ -159,6 +179,8 @@ initial_duty = duty_from_voltage(initial_voltage)  # Calculate initial duty cycl
 print(f"Initial Duty: {initial_duty}")
 duty = int(initial_duty)
 pwm.duty_u16(duty)
+
+### Test above
 
 # Get initial desired power output
 P_desired = 0
@@ -178,7 +200,7 @@ while True:
         ina.configure()
         first_run = 0
         # This starts a 1kHz timer which we use to control the execution of the control loops and sampling
-        loop_timer = Timer(mode=Timer.PERIODIC, freq=2000, callback=tick)        
+        loop_timer = Timer(mode=Timer.PERIODIC, freq=1000, callback=tick)        
         
     if timer_elapsed == 1: # This is executed at 1kHz
         timer_elapsed = 0  # Reset the timer flag
@@ -219,7 +241,9 @@ while True:
 
         pwm.duty_u16(duty)
         
+        #wait_for_stability()
         utime.sleep_ms(5)
+        
 
         # Calculate State of Charge (SoC)
         soc = calculate_soc(E_stored)
@@ -243,6 +267,7 @@ while True:
             print(f"Average Power over last 5 seconds: {average_power:.2f} W")
             P_desired = client.get_desired_power()
             update_pid_gains(P_desired)  # Update PID gains based on new desired power
+            start_time = utime.ticks_ms()  # Reset the start time
             power_sum = 0  # Reset power sum
             sample_count = 0  # Reset sample count
             
@@ -250,3 +275,4 @@ while True:
 
             client.send_storage_power(average_power)
             client.send_soc(soc)
+
