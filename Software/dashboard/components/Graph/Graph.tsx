@@ -35,7 +35,7 @@ export default function Graph({
       {graphFullScreen && (
         <div className="fixed w-full h-full z-10 bg-black/50 backdrop-blur-sm top-0 flex justify-center items-center">
           <Plot
-            className="h-[70%] w-[90%]"
+            className="h-[70%] w-[85%]"
             data={data}
             animation={animation}
             graphFullScreen={graphFullScreen}
@@ -148,7 +148,7 @@ function Plot({
           className="select-none"
         >
           <XAxis
-            allowDataOverflow
+            // allowDataOverflow
             dataKey={data.xValue}
             label={{
               value: FormatString(data.xValue),
@@ -160,7 +160,7 @@ function Plot({
 
           {data.unitData1.length > 0 && (
             <YAxis
-              allowDataOverflow
+              // allowDataOverflow
               label={{
                 value: data.unitData1[0].getYUnit(),
                 angle: -90,
@@ -173,7 +173,7 @@ function Plot({
 
           {data.unitData2.length > 0 && (
             <YAxis
-              allowDataOverflow
+              // allowDataOverflow
               label={{
                 value: data.unitData2[0].getYUnit(),
                 angle: -90,

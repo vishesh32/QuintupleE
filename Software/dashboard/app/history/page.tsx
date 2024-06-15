@@ -6,6 +6,7 @@ import { getTick } from "../actions";
 import { GraphData, Variable } from "@/helpers/graph_types";
 import { AllVars, AllGraphs } from "@/helpers/graph_data";
 import { getYValues } from "@/helpers/graph_funcs";
+import DeferrableTable from "@/components/DeferrableTable/DeferrableTable";
 
 export default function History() {
   const [graphData, setGraphData] = useState<GraphData[]>([]);
@@ -34,6 +35,10 @@ export default function History() {
       {graphData.map((data, i) => (
         <Graph key={i} data={data} animation={false} />
       ))}
+
+      <div className="flex w-full justify-center items-center bg-red-500">
+        <DeferrableTable />
+      </div>
     </main>
   );
 }

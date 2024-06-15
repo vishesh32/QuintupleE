@@ -40,5 +40,23 @@ async function getValuesOnTick(yValues: any, day: number, tick: number) {
   return res;
 }
 
+async function getAllDays(){
+  return await db?.collection("days").find().sort({day: -1}).toArray();
+}
 
-export { getTick, getDayAndTick, getValuesOnTick };
+async function getDeferrableData(day: number){
+  return await db?.collection("ticks").find({day: day}, {projection: {
+    _id: 0,
+    day: 1,
+    tick: 1,
+    avg_blue_power: 1,
+    avg_yellow_power: 1,
+    avg_grey_power: 1,
+    algo_blue_power: 1,
+    algo_yellow_power: 1,
+    algo_grey_power: 1,
+  }}).sort({tick: -1}).toArray();
+}
+
+
+export { getTick, getDayAndTick, getValuesOnTick, getAllDays, getDeferrableData };
