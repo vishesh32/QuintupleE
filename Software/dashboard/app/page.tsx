@@ -73,16 +73,16 @@ export default function Home() {
 
   return (
     <main key={forceRender} className="mx-20 my-5">
-      <div className="flex gap-3">
+      <div className="grid gap-5 2xl:grid-cols-2">
         <SmallCard
-          className="ml-auto"
+          className="!w-full"
           top={<p>Day and Tick</p>}
           middle={<p>Tick: {tick}</p>}
           bottom={<p>Day: {day}</p>}
           />
 
         <SmallCard
-          className="ml-auto"
+          className="!w-full"
           top={<p>Cost</p>}
           middle={<p>{liveData.cost.toFixed(2)} ¢</p>}
           bottom={<p>Buy Price: {liveData.buy} ¢/J | Sell Price: {liveData.sell} ¢/J </p>}
