@@ -57,32 +57,30 @@ export default function Home() {
   useEffect(() => {
     // get the current day and tick
     // check if data from the last tick is available
-    getDayAndTick().then((res) =>{
-      setDay(res.tick == 0 ? res.day - 1 : res.day);
-      setTick(res.tick == 0 ? 59 : res.tick - 1);
-    });
+    setDay(5728245);
+    setTick(55);
   }, []);
 
   useEffect(()=>{
     const timoutId = setTimeout(() => {
       changeGraphData(day, tick);
-    }, 5000);
+    }, 500);
 
     return () => clearTimeout(timoutId);
   }, [tick, day, graphData])
 
   return (
     <main key={forceRender} className="mx-20 my-5">
-      <div className="flex gap-3">
+      <div className="grid gap-5 2xl:grid-cols-2">
         <SmallCard
-          className="ml-auto"
+          className="!w-full"
           top={<p>Day and Tick</p>}
           middle={<p>Tick: {tick}</p>}
           bottom={<p>Day: {day}</p>}
           />
 
         <SmallCard
-          className="ml-auto"
+          className="!w-full"
           top={<p>Cost</p>}
           middle={<p>{liveData.cost.toFixed(2)} ¢</p>}
           bottom={<p>Buy Price: {liveData.buy} ¢/J | Sell Price: {liveData.sell} ¢/J </p>}
