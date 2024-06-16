@@ -36,7 +36,7 @@ export default function History() {
         <Graph key={i} data={data} animation={false} />
       ))}
 
-      <div className="flex w-full justify-center items-center bg-red-500">
+      <div className="flex w-full justify-center items-center col-span-2 p-20">
         <DeferrableTable />
       </div>
     </main>

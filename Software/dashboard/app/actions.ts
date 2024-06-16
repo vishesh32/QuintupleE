@@ -41,7 +41,7 @@ async function getValuesOnTick(yValues: any, day: number, tick: number) {
 }
 
 async function getAllDays(){
-  return await db?.collection("days").find().sort({day: -1}).toArray();
+  return await db?.collection("days").find().sort({day: 1}).toArray();
 }
 
 async function getDeferrableData(day: number){
@@ -55,7 +55,7 @@ async function getDeferrableData(day: number){
     algo_blue_power: 1,
     algo_yellow_power: 1,
     algo_grey_power: 1,
-  }}).sort({tick: -1}).toArray();
+  }}).sort({tick: 1}).toArray();
 }
 
 

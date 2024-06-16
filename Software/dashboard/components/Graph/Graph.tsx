@@ -33,9 +33,9 @@ export default function Graph({
   return (
     <>
       {graphFullScreen && (
-        <div className="fixed w-full h-full z-10 bg-black/50 backdrop-blur-sm top-0 flex justify-center items-center">
+        <div className="fixed w-full h-full z-10 bg-black/50 backdrop-blur-sm top-0 left-0 flex justify-center items-center p-[50px]">
           <Plot
-            className="h-[70%] w-[85%]"
+            className="h-[80%]"
             data={data}
             animation={animation}
             graphFullScreen={graphFullScreen}

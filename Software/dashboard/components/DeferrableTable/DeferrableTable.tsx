@@ -7,6 +7,10 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import { getAllDays, getDeferrableData } from "@/app/actions";
+import { StyledEngineProvider } from '@mui/material/styles';
+
+const scale = 5 * 5;
+const cellStyles = "text-xl "
 
 export default function DeferrableTable() {
   const [data, setData] = React.useState<DeferrableTableData[]>([]);
@@ -21,38 +25,40 @@ export default function DeferrableTable() {
   }, []);
 
   return (
-    <TableContainer component={Paper}>
-      <Table sx={{ minWidth: 650 }} aria-label="simple table">
-        <TableHead>
-          <TableRow>
-            <TableCell align="right">Day</TableCell>
-            <TableCell align="right">Demand Type</TableCell>
-            <TableCell align="right">Expected Energy Supplied</TableCell>
-            <TableCell align="right">Actual Energy Supplied</TableCell>
-            <TableCell align="right">Deferrable Amount</TableCell>
-            <TableCell align="right">Ticks Left to Supply Demand</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {data.map((row: any) => (
-            <TableRow
-              key={row.name}
-              sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
-            >
-              {/* <TableCell component="th" scope="row">
-                {row.name}
-              </TableCell> */}
-              <TableCell align="right">{row.day}</TableCell>
-              <TableCell align="right">{row.defType}</TableCell>
-              <TableCell align="right">{row.expSupplied}</TableCell>
-              <TableCell align="right">{row.actSupplied}</TableCell>
-              <TableCell align="right">{row.energyToSupply}</TableCell>
-              <TableCell align="right">{row.ticksLeft}</TableCell>
+    <StyledEngineProvider injectFirst>
+      <TableContainer component={Paper}  sx={{ minWidth: 650, maxWidth: 2000, padding: 2 }}>
+        <Table sx={{ minWidth: 650, maxWidth: 2000 }}>
+          <TableHead>
+            <TableRow>
+              <TableCell className={cellStyles} align="left">Day</TableCell>
+              <TableCell className={cellStyles} align="right">Demand Type</TableCell>
+              <TableCell className={cellStyles} align="right">Total Expected Energy Supplied</TableCell>
+              <TableCell className={cellStyles} align="right">Total Actual Energy Supplied</TableCell>
+              <TableCell className={cellStyles} align="right">Deferrable Amount</TableCell>
+              <TableCell className={cellStyles} align="right">Ticks Left to Supply Demand</TableCell>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+          </TableHead>
+          <TableBody>
+            {data.map((row: any) => (
+              <TableRow
+                key={row.name}
+                // sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
+              >
+                {/* <TableCell component="th" scope="row">
+                  {row.name}
+                </TableCell> */}
+                <TableCell className={cellStyles + (row.defType == "Blue"? " text-blue-600": (row.defType == "Grey"? " text-gray-600" : " text-yellow-500"))} align="left">{row.day}</TableCell>
+                <TableCell className={cellStyles + (row.defType == "Blue"? " text-blue-600": (row.defType == "Grey"? " text-gray-600" : " text-yellow-500"))} align="right">{row.defType}</TableCell>
+                <TableCell className={cellStyles + (row.defType == "Blue"? " text-blue-600": (row.defType == "Grey"? " text-gray-600" : " text-yellow-500"))} align="right">{row.expSupplied.toFixed(2)}</TableCell>
+                <TableCell className={cellStyles + (row.defType == "Blue"? " text-blue-600": (row.defType == "Grey"? " text-gray-600" : " text-yellow-500"))} align="right">{row.actSupplied.toFixed(2)}</TableCell>
+                <TableCell className={cellStyles + (row.defType == "Blue"? " text-blue-600": (row.defType == "Grey"? " text-gray-600" : " text-yellow-500"))} align="right">{row.energyToSupply.toFixed(2)}</TableCell>
+                <TableCell className={cellStyles + (row.defType == "Blue"? " text-blue-600": (row.defType == "Grey"? " text-gray-600" : " text-yellow-500"))} align="right">{row.ticksLeft}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </StyledEngineProvider>
   );
 }
 
@@ -76,8 +82,8 @@ async function getDeferrableTableData() {
             tick["tick"] >= day["deferables"][0]["start"] &&
             tick["tick"] <= day["deferables"][0]["end"]
           ) {
-            expSum[0] += tick["algo_blue_power"]*25;
-            actSum[0] += tick["avg_blue_power"]*25;
+            expSum[0] += tick["algo_blue_power"]*scale;
+            actSum[0] += tick["avg_blue_power"]*scale;
             data.push({
               day: day.day,
               defType: "Blue",
@@ -93,8 +99,8 @@ async function getDeferrableTableData() {
             tick["tick"] >= day["deferables"][1]["start"] &&
             tick["tick"] <= day["deferables"][1]["end"]
           ) {
-            expSum[1] += tick["algo_grey_power"]*25;
-            actSum[1] += tick["avg_grey_power"]*25;
+            expSum[1] += tick["algo_grey_power"]*scale;
+            actSum[1] += tick["avg_grey_power"]*scale;
             data.push({
               day: day.day,
               defType: "Grey",
@@ -110,8 +116,8 @@ async function getDeferrableTableData() {
             tick["tick"] >= day["deferables"][2]["start"] &&
             tick["tick"] <= day["deferables"][2]["end"]
           ) {
-            expSum[2] += tick["algo_yellow_power"]*25;
-            actSum[2] += tick["avg_yellow_power"]*25;
+            expSum[2] += tick["algo_yellow_power"]*scale;
+            actSum[2] += tick["avg_yellow_power"]*scale;
             data.push({
               day: day.day,
               defType: "Yellow",
@@ -126,7 +132,7 @@ async function getDeferrableTableData() {
     }
   }
 
-  return data;
+  return data.toReversed();
 }
 
 interface DeferrableTableData {
