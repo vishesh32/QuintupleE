@@ -76,7 +76,7 @@ if __name__ == "__main__":
             cost, actions = predict(policy_network, env, tick, history)
             # print(f"before: {actions}")
             actions["import_export"] = actions["import_export"] * SCALE
-            actions["release_store"] = actions["release_store"] * SCALE * -1
+            actions["release_store"] = actions["release_store"] * SCALE * -1 * (0.5)
             actions["allocations"] = [a * SCALE * 0.2 for a in actions["allocations"]]
             # print(f"after: {actions}")
 
