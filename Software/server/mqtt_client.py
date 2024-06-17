@@ -113,7 +113,7 @@ class MClient:
         else:
             self.db_data[key] = [value]
 
-    def get_full_tick(self, tick: Tick, p_import, p_store, deferables_supplied) -> FullTick | None:
+    def get_full_tick(self, tick: Tick, p_import, p_store, deferables_supplied, sent_to_leds) -> FullTick | None:
         try:
             return FullTick(
                 day=tick.day,
@@ -133,9 +133,11 @@ class MClient:
                 avg_grey_power=self._get_avg(self.db_data[Device.LOADK]),
                 algo_import_power=p_import,
                 algo_store_power=p_store,
-                algo_blue_power=deferables_supplied[0],
-                algo_yellow_power=deferables_supplied[2],
-                algo_grey_power=deferables_supplied[1]
+                algo_red_power= sent_to_leds,
+                algo_blue_power=sent_to_leds,
+                algo_yellow_power=sent_to_leds,
+                algo_grey_power=sent_to_leds,
+                algo_deferables_supplied=deferables_supplied,
             )
         except Exception as e:
             print(f"Failed to create object: {e}")

@@ -29,6 +29,7 @@ class FullTick(BaseModel):
 	sun: int
 	buy_price: int
 	sell_price: int
+
 	# outcomes
 	cost: float
 	avg_pv_power: float
@@ -43,6 +44,8 @@ class FullTick(BaseModel):
 	# algo decisions
 	algo_import_power: float
 	algo_store_power: float
+	algo_red_power: float
 	algo_blue_power: float
 	algo_yellow_power: float
 	algo_grey_power: float
+	algo_deferables_supplied: List[float]

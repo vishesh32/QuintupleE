@@ -52,9 +52,11 @@ async function getDeferrableData(day: number){
     avg_blue_power: 1,
     avg_yellow_power: 1,
     avg_grey_power: 1,
+    algo_red_power: 1,
     algo_blue_power: 1,
     algo_yellow_power: 1,
     algo_grey_power: 1,
+    algo_deferables_supplied: 1,
   }}).sort({tick: 1}).toArray();
 }
 

@@ -77,7 +77,8 @@ if __name__ == "__main__":
             # print(f"before: {actions}")
             actions["import_export"] = actions["import_export"] * SCALE
             actions["release_store"] = actions["release_store"] * SCALE * -1
-            actions["allocations"] = [a * SCALE * 0.2 for a in actions["allocations"]]
+            # divide the allocations to get the power
+            actions["allocations"] = [a * SCALE for a in actions["allocations"]]
             # print(f"after: {actions}")
 
             # print(f"\n\n\nsending this to storage {actions['release_store']}\n\n\n")
@@ -95,15 +96,17 @@ if __name__ == "__main__":
             # sending the irradiance
             mqtt_client.send_sun_data(tick.sun)
 
-            tick.demand = tick.demand / (4 * 4)
+
+            # find the total power that the load needs to supply
+            total_power = tick.demand + sum(actions["allocations"])
 
             # Red is instant deferrable
-            mqtt_client.send_load_power(Device.LOADR, tick.demand)
+            mqtt_client.send_load_power(Device.LOADR, total_power/4)
 
             # 3 extra defferables are grey, yellow, blue
-            mqtt_client.send_load_power(Device.LOADB, actions["allocations"][0])
-            mqtt_client.send_load_power(Device.LOADK, actions["allocations"][1])
-            mqtt_client.send_load_power(Device.LOADY, actions["allocations"][2])
+            mqtt_client.send_load_power(Device.LOADB, total_power/4)
+            mqtt_client.send_load_power(Device.LOADK, total_power/4)
+            mqtt_client.send_load_power(Device.LOADY, total_power/4)
 
         # print(list(mqtt_client.db_data.keys()), len(list(mqtt_client.db_data.keys())))
 
@@ -112,7 +115,7 @@ if __name__ == "__main__":
 
             # only write the previous tick data
             if prev_tick != None:
-                full_tick = mqtt_client.get_full_tick(prev_tick, prev_actions["import_export"], prev_actions["release_store"], prev_actions["allocations"])
+                full_tick = mqtt_client.get_full_tick(prev_tick, prev_actions["import_export"], prev_actions["release_store"], prev_actions["allocations"], prev_total_power/4)
                 
                 try:
                     # calc cost
@@ -147,6 +150,7 @@ if __name__ == "__main__":
         prev_tick = tick
         prev_day = day
         prev_actions = actions
+        prev_total_power = total_power
 
         # Finds the exact start of the next tick
         delay = time.time() - start

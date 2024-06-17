@@ -32,8 +32,8 @@ export default function DeferrableTable() {
             <TableRow>
               <TableCell className={cellStyles} align="left">Day</TableCell>
               <TableCell className={cellStyles} align="right">Demand Type</TableCell>
-              <TableCell className={cellStyles} align="right">Total Expected Energy Supplied</TableCell>
-              <TableCell className={cellStyles} align="right">Total Actual Energy Supplied</TableCell>
+              <TableCell className={cellStyles} align="right">Total Energy Supplied</TableCell>
+              {/* <TableCell className={cellStyles} align="right">Total Actual Energy Supplied</TableCell> */}
               <TableCell className={cellStyles} align="right">Deferrable Amount</TableCell>
               <TableCell className={cellStyles} align="right">Ticks Left to Supply Demand</TableCell>
             </TableRow>
@@ -50,7 +50,7 @@ export default function DeferrableTable() {
                 <TableCell className={cellStyles + (row.defType == "Blue"? " text-blue-600": (row.defType == "Grey"? " text-gray-600" : " text-yellow-500"))} align="left">{row.day}</TableCell>
                 <TableCell className={cellStyles + (row.defType == "Blue"? " text-blue-600": (row.defType == "Grey"? " text-gray-600" : " text-yellow-500"))} align="right">{row.defType}</TableCell>
                 <TableCell className={cellStyles + (row.defType == "Blue"? " text-blue-600": (row.defType == "Grey"? " text-gray-600" : " text-yellow-500"))} align="right">{row.expSupplied.toFixed(2)}</TableCell>
-                <TableCell className={cellStyles + (row.defType == "Blue"? " text-blue-600": (row.defType == "Grey"? " text-gray-600" : " text-yellow-500"))} align="right">{row.actSupplied.toFixed(2)}</TableCell>
+                {/* <TableCell className={cellStyles + (row.defType == "Blue"? " text-blue-600": (row.defType == "Grey"? " text-gray-600" : " text-yellow-500"))} align="right">{row.actSupplied.toFixed(2)}</TableCell> */}
                 <TableCell className={cellStyles + (row.defType == "Blue"? " text-blue-600": (row.defType == "Grey"? " text-gray-600" : " text-yellow-500"))} align="right">{row.energyToSupply.toFixed(2)}</TableCell>
                 <TableCell className={cellStyles + (row.defType == "Blue"? " text-blue-600": (row.defType == "Grey"? " text-gray-600" : " text-yellow-500"))} align="right">{row.ticksLeft}</TableCell>
               </TableRow>
@@ -73,7 +73,7 @@ async function getDeferrableTableData() {
   if (days) {
     for (let day of days) {
       var expSum = [0, 0, 0];
-      var actSum = [0, 0, 0];
+      // var actSum = [0, 0, 0];
       var ticks = await getDeferrableData(day.day);
       if (ticks) {
         for (let tick of ticks) {
@@ -82,13 +82,13 @@ async function getDeferrableTableData() {
             tick["tick"] >= day["deferables"][0]["start"] &&
             tick["tick"] <= day["deferables"][0]["end"]
           ) {
-            expSum[0] += tick["algo_blue_power"]*scale;
-            actSum[0] += tick["avg_blue_power"]*scale;
+            expSum[0] += tick["algo_deferables_supplied"][0]*scale;
+            // actSum[0] += tick["avg_blue_power"]*scale;
             data.push({
               day: day.day,
               defType: "Blue",
               expSupplied: expSum[0],
-              actSupplied: actSum[0],
+              // actSupplied: actSum[0],
               energyToSupply: day["deferables"][0]["energy"],
               ticksLeft: day["deferables"][0]["end"] - tick["tick"],
             });
@@ -99,13 +99,13 @@ async function getDeferrableTableData() {
             tick["tick"] >= day["deferables"][1]["start"] &&
             tick["tick"] <= day["deferables"][1]["end"]
           ) {
-            expSum[1] += tick["algo_grey_power"]*scale;
-            actSum[1] += tick["avg_grey_power"]*scale;
+            expSum[1] += tick["algo_deferables_supplied"][1]*scale;
+            // actSum[1] += tick["avg_grey_power"]*scale;
             data.push({
               day: day.day,
               defType: "Grey",
               expSupplied: expSum[1],
-              actSupplied: actSum[1],
+              // actSupplied: actSum[1],
               energyToSupply: day["deferables"][1]["energy"],
               ticksLeft: day["deferables"][1]["end"] - tick["tick"],
             });
@@ -116,13 +116,13 @@ async function getDeferrableTableData() {
             tick["tick"] >= day["deferables"][2]["start"] &&
             tick["tick"] <= day["deferables"][2]["end"]
           ) {
-            expSum[2] += tick["algo_yellow_power"]*scale;
-            actSum[2] += tick["avg_yellow_power"]*scale;
+            expSum[2] += tick["algo_deferables_supplied"][2]*scale;
+            // actSum[2] += tick["avg_yellow_power"]*scale;
             data.push({
               day: day.day,
               defType: "Yellow",
               expSupplied: expSum[2],
-              actSupplied: actSum[2],
+              // actSupplied: actSum[2],
               energyToSupply: day["deferables"][2]["energy"],
               ticksLeft: day["deferables"][2]["end"] - tick["tick"],
             });
@@ -139,7 +139,7 @@ interface DeferrableTableData {
   day: number;
   defType: string;
   expSupplied: number;
-  actSupplied: number;
+  // actSupplied: number;
   energyToSupply: number;
   ticksLeft: number;
 }
