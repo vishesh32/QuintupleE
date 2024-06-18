@@ -26,7 +26,10 @@ export default function ManualControl() {
   const [override, setOverride] = useState<boolean>(false);
   const [forceRender, setForceRender] = useState<number>(0);
 
+  const [mppt, setMppt] = useState<boolean>(false);
+
   const mClient = useRef<MQTTClient | undefined>(undefined);
+
 
   useEffect(() => {
     if (mClient.current === undefined){
@@ -46,6 +49,8 @@ export default function ManualControl() {
 
     // check whether the server is set to manual or use the algorithm
     mClient.current?.ask_override_status();
+
+    setMppt(mClient.current?.mppt ?? false);
   }, []);
 
   useEffect(() => {
@@ -70,22 +75,39 @@ export default function ManualControl() {
     return ()=>clearInterval(intId);
   })
 
+  const handleMpptClick = () => {
+    const tmp = !mppt;
+    setMppt(tmp);
+    mClient.current?.send_mppt_status(tmp);
+  }
+
   return (
     <div>
       <div className="flex justify-center flex-row">
         {devices.map((val, i)=><Connect key={i + forceRender} data={val} />)}
       </div>
-      <div className="w-full flex flex-row gap-2 flex-wrap justify-center p-5 pt-8">
+      <div className="w-full flex flex-row gap-8 flex-wrap justify-center p-5 pt-8 text-xl">
         <button
           onClick={handleOverrideClick}
           className={`${
             override ? "bg-green-600" : "bg-red-600"
-          } h-fit w-[350px] text-primary py-3 rounded-lg`}
+          } h-fit w-[400px] text-primary p-4 rounded-lg`}
         >
           Click To{" "}
           {override
             ? "Control With The Algorithm"
             : "Manually Override Controls"}
+        </button>
+        <button
+          onClick={handleMpptClick}
+          className={`${
+            !mppt ? "bg-green-600" : "bg-red-600"
+          } h-fit w-[400px] text-primary p-4 rounded-lg`}
+        >
+          Click To{" "}
+          {!mppt
+            ? "Use The MPPT Algorithm"
+            : "Use The Irradiance Value"}
         </button>
       </div>
       <main className="p-5 flex ml-12 mr-12 h-full gap-5">

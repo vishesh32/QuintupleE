@@ -6,12 +6,14 @@ const serverTopic = "server";
 const uiTopic = "ui";
 
 const prec = 2;
+const mppt_target_topic = "mppt";
 
 class MQTTClient {
   private client: any;
   public pvArrayPower: number = 0;
   public loadPowers: number[] = [0, 0, 0, 0];
   public devices: ({name: string, lastHeard: number})[] = [];
+  public mppt: boolean = false;
 
   constructor(
     setCurrentPV: any,
@@ -104,6 +106,8 @@ class MQTTClient {
       ) {
         if (msgObj.target == "override") {
           setOverride(msgObj.payload);
+        } else if(msgObj.target == mppt_target_topic && msgObj.payload == "req") {
+          this.send_mppt_status(this.mppt);
         }
       }
 
@@ -145,6 +149,10 @@ class MQTTClient {
       `${picoTopic}/${load}`,
       JSON.stringify({ target: load, payload: val })
     );
+  }
+
+  send_mppt_status(mppt: boolean) {
+    this.client.publish(mppt_target_topic, JSON.stringify({target: "mppt", payload: mppt}));
   }
 
   send_override_status(override: boolean) {

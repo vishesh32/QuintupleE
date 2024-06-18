@@ -8,6 +8,7 @@ import json
 PICO_TOPIC = "pico"
 SERVER_TOPIC = "server"
 UI_TOPIC = "ui"
+MPPT_TOPIC = "mppt"
 
 # MQTT broker settings
 MQTT_CLIENT_ID = ubinascii.hexlify(machine.unique_id())
@@ -47,13 +48,21 @@ class MClient:
 
         self.client = client
         self.client.subscribe(f"{PICO_TOPIC}/{device}")
-        print(f"Waiting for messages on {PICO_TOPIC}/{device}")
+
+        # print(f"Waiting for messages on {PICO_TOPIC}/{device}")
 
         self.desired_power = 0
         self.power_req = 0
         self.irradiance = 0
+        self.mppt = False
 
         self.device = device
+
+        # if it is the PV array
+        # subscribe to mppt topic and sync the mppt value with the ui
+        if device == DEVICE.PV_ARRAY:
+            self.client.subscribe(MPPT_TOPIC)
+            self.sync_mppt_status()
     
     def on_mqtt_msg(self, topic, msg):
         try:
@@ -70,6 +79,10 @@ class MClient:
             elif data["target"] == DEVICE.PV_ARRAY:
                 self.irradiance = data["payload"]
                 print(f"Irradiance: {self.irradiance}")
+
+            elif data["target"] == MPPT_TOPIC:
+                self.mppt = data["payload"]
+                print(f"mppt: {self.mppt}")
                 
             # this is for all loads
             elif data["target"] == self.device:
@@ -88,6 +101,13 @@ class MClient:
 
     def send_load_power(self, power):
         self.client.publish(SERVER_TOPIC, json.dumps({"target": self.device, "payload": power}))
+
+    def sync_mppt_status(self):
+        self.client.publish(UI_TOPIC, json.dumps({"target": MPPT_TOPIC, "payload": "req"}))
+
+    def get_mppt_status(self):
+        self.check_msg()
+        return self.mppt
 
     # def send_shunt_current(self, current):
     #     self.client.publish(UI_TOPIC, json.dumps({"target": self.device, "payload": current}))
