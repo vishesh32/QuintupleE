@@ -58,7 +58,7 @@ if __name__ == "__main__":
         mqtt_client = MClient()
 
     # Sync with external server
-    _, tick = get_day_and_tick(TICK_LENGTH)
+    _, tick = get_day_and_tick(None, TICK_LENGTH)
     day, tick = sync_with_server(tick.tick, TICK_LENGTH)
 
     while True:

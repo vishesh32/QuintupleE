@@ -38,11 +38,16 @@ async def parallel_get(base_url, paths):
 
 
 # gets current day and tick from external server
-def get_day_and_tick(tick_len=5):
+def get_day_and_tick(tick, tick_len=5):
+    endpoints = ["/sun", "/price", "/demand"]
+
+    if tick == None or tick == 59:
+        endpoints.append("/deferables")
+
     sun_data, price_data, demand_data, deferables_data = asyncio.run(
         parallel_get(
             "https://icelec50015.azurewebsites.net/",
-            ["/sun", "/price", "/demand", "/deferables"],
+            endpoints
         )
     )
 
