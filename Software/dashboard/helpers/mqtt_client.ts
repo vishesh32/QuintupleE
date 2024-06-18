@@ -4,6 +4,7 @@ import mqtt from "mqtt";
 const picoTopic = "pico";
 const serverTopic = "server";
 const uiTopic = "ui";
+const mppt_target_topic = "mppt";
 
 const prec = 2;
 
@@ -12,6 +13,7 @@ class MQTTClient {
   public pvArrayPower: number = 0;
   public loadPowers: number[] = [0, 0, 0, 0];
   public devices: ({name: string, lastHeard: number})[] = [];
+  public mppt: boolean = false;
 
   constructor(
     setCurrentPV: any,
@@ -104,6 +106,8 @@ class MQTTClient {
       ) {
         if (msgObj.target == "override") {
           setOverride(msgObj.payload);
+        } else if(msgObj.target == mppt_target_topic && msgObj.payload == "req") {
+          this.send_mppt_status(this.mppt);
         }
       }
 
@@ -137,7 +141,6 @@ class MQTTClient {
       `${picoTopic}/${Device.STORAGE}`,
       JSON.stringify({ target: Device.STORAGE, payload: val })
     );
-    // console.log("here")
   }
 
   send_load_power(val: number, load: string) {
@@ -159,6 +162,10 @@ class MQTTClient {
       serverTopic,
       JSON.stringify({ target: "override", payload: "req" })
     );
+  }
+
+  send_mppt_status(mppt: boolean) {
+    this.client.publish(mppt_target_topic, JSON.stringify({target: "mppt", payload: mppt}));
   }
 }
 

@@ -121,7 +121,7 @@ if __name__ == "__main__":
                     # calc cost
                     avg_import = mqtt_client._get_avg(prev_import)
                     avg_export = mqtt_client._get_avg(prev_export)
-                    cost = full_tick.avg_import_export_power*5*tick.sell_price + avg_export*5*tick.buy_price
+                    cost = avg_import*5*tick.sell_price + avg_export*5*tick.buy_price
 
                     print(avg_import, avg_export, cost)
 
