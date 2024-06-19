@@ -2,8 +2,6 @@ from machine import Pin, I2C, ADC, PWM, Timer
 import time
 from mqtt_client import MClient, DEVICE
 
-client = MClient(DEVICE.EXTERNAL_GRID)
-
 # Set up some pin allocations for the Analogues and switches
 va_pin = ADC(Pin(28))
 vb_pin = ADC(Pin(26))
@@ -115,6 +113,8 @@ while True:
         ina.configure()
         first_run = 0
 
+        client = MClient(DEVICE.EXTERNAL_GRID)
+
         # This starts a 1kHz timer which we use to control the execution of the control loops and sampling
         loop_timer = Timer(mode=Timer.PERIODIC, freq=2000, callback=tick)
         energy_start_time = time.time()
@@ -179,6 +179,7 @@ while True:
 
         # This set of prints executes every 100 loops by default and can be used to output debug or extra info over USB enable or disable lines as needed
         if count > 35:
+            client.send_v_bus(vb)
             print("Vb: {:.3f}".format(vb))
             print(f"Power: {power}")
             print("iL: {:.3f}".format(iL))

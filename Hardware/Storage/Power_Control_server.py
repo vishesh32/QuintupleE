@@ -4,6 +4,8 @@ import math
 from mqtt_client import MClient, DEVICE
 import machine
 
+utime.sleep(5000)
+
 try:
     client = MClient(DEVICE.STORAGE)
 
