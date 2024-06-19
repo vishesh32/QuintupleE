@@ -104,10 +104,14 @@ if __name__ == "__main__":
             # Red is instant deferrable
             mqtt_client.send_load_power(Device.LOADR, tick.demand)
 
+            actions["allocations"][0] = actions["allocations"][0] / 2
+            actions["allocations"][1] = actions["allocations"][1] / 2
+            actions["allocations"][2] = actions["allocations"][2] / 2
+
             # 3 extra defferables are grey, yellow, blue
-            mqtt_client.send_load_power(Device.LOADB, actions["allocations"][0]/2)
-            mqtt_client.send_load_power(Device.LOADK, actions["allocations"][1]/2)
-            mqtt_client.send_load_power(Device.LOADY, actions["allocations"][2]/2)
+            mqtt_client.send_load_power(Device.LOADB, actions["allocations"][0])
+            mqtt_client.send_load_power(Device.LOADK, actions["allocations"][1])
+            mqtt_client.send_load_power(Device.LOADY, actions["allocations"][2])
 
         # print(list(mqtt_client.db_data.keys()), len(list(mqtt_client.db_data.keys())))
 
