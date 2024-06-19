@@ -9,7 +9,7 @@ import Paper from "@mui/material/Paper";
 import { getAllDays, getDeferrableData } from "@/app/actions";
 import { StyledEngineProvider } from '@mui/material/styles';
 
-const scale = 5 * 5;
+const scale = 5 * 5 * 2;
 const cellStyles = "text-xl "
 
 export default function DeferrableTable() {

@@ -81,7 +81,7 @@ if __name__ == "__main__":
             # print(f"before: {actions}")
             actions["import_export"] = actions["import_export"] * SCALE
             actions["release_store"] = actions["release_store"] * SCALE * -1 * (0.5)
-            actions["allocations"] = [a * SCALE * 0.2 for a in actions["allocations"]]
+            actions["allocations"] = [a * SCALE * 0.2 * 0.5 for a in actions["allocations"]]
             # print(f"after: {actions}")
 
             # print(f"\n\n\nsending this to storage {actions['release_store']}\n\n\n")
@@ -103,10 +103,6 @@ if __name__ == "__main__":
 
             # Red is instant deferrable
             mqtt_client.send_load_power(Device.LOADR, tick.demand)
-
-            actions["allocations"][0] = actions["allocations"][0] / 2
-            actions["allocations"][1] = actions["allocations"][1] / 2
-            actions["allocations"][2] = actions["allocations"][2] / 2
 
             # 3 extra defferables are grey, yellow, blue
             mqtt_client.send_load_power(Device.LOADB, actions["allocations"][0])
