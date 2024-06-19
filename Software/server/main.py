@@ -58,17 +58,21 @@ if __name__ == "__main__":
         mqtt_client = MClient()
 
     # Sync with external server
-    _, tick = get_day_and_tick(None, TICK_LENGTH)
-    day, tick = sync_with_server(tick.tick, TICK_LENGTH)
+    day, tick = get_day_and_tick(None, TICK_LENGTH)
+    tmp_day, tick = sync_with_server(tick.tick, TICK_LENGTH)
+
+    if tmp_day != None: day = tmp_day
 
     while True:
         # this is the start of the next tick
         start = time.time()
 
-        if not env["deferables"] or tick.tick == 0:
+        if tmp_day != None: print(f"Day: {day.day}")
+
+        if day and not env["deferables"] or tick.tick == 0:
             # print("New day")
             env["deferables"] = day.deferables
-            print(f"Cost for day: {tick.day - 1}: {sum(daily_costs)}")
+            # print(f"Cost for day: {tick.day - 1}: {sum(daily_costs)}")
 
         # part that runs the start of every new tick
         if RUN_ALGO:
@@ -101,9 +105,9 @@ if __name__ == "__main__":
             mqtt_client.send_load_power(Device.LOADR, tick.demand)
 
             # 3 extra defferables are grey, yellow, blue
-            mqtt_client.send_load_power(Device.LOADB, actions["allocations"][0])
-            mqtt_client.send_load_power(Device.LOADK, actions["allocations"][1])
-            mqtt_client.send_load_power(Device.LOADY, actions["allocations"][2])
+            mqtt_client.send_load_power(Device.LOADB, actions["allocations"][0]/2)
+            mqtt_client.send_load_power(Device.LOADK, actions["allocations"][1]/2)
+            mqtt_client.send_load_power(Device.LOADY, actions["allocations"][2]/2)
 
         # print(list(mqtt_client.db_data.keys()), len(list(mqtt_client.db_data.keys())))
 
@@ -120,7 +124,7 @@ if __name__ == "__main__":
                     avg_export = mqtt_client._get_avg(prev_export)
                     cost = avg_import*5*tick.sell_price + avg_export*5*tick.buy_price
 
-                    print(avg_import, avg_export, cost)
+                    # print(avg_import, avg_export, cost)
 
                     # change cost in tick_outcomes
                     if full_tick != None: full_tick.cost = cost
@@ -151,4 +155,5 @@ if __name__ == "__main__":
         # Finds the exact start of the next tick
         delay = time.time() - start
         sleep(WAIT - delay)
-        day, tick = sync_with_server(tick.tick, TICK_LENGTH)
+        tmp_day, tick = sync_with_server(tick.tick, TICK_LENGTH)
+        if tmp_day != None: day = tmp_day

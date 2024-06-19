@@ -38,20 +38,32 @@ async def parallel_get(base_url, paths):
 
 
 # gets current day and tick from external server
-def get_day_and_tick(tick, tick_len=5):
+def get_day_and_tick(tick_val, tick_len=5):
     endpoints = ["/sun", "/price", "/demand"]
+    day = None
+    tick = None
 
-    if tick == None or tick == 59:
+    deferables_data = None
+
+    if tick_val == None or tick_val == 59:
         endpoints.append("/deferables")
 
-    sun_data, price_data, demand_data, deferables_data = asyncio.run(
+    data = asyncio.run(
         parallel_get(
             "https://icelec50015.azurewebsites.net/",
             endpoints
         )
     )
+    
 
-    day = Day.model_validate({"day": price_data["day"], "deferables": deferables_data})
+    sun_data = data[0]
+    price_data = data[1]
+    demand_data = data[2]
+
+    if len(data) > 3:
+        deferables_data = data[3]
+
+        day = Day.model_validate({"day": price_data["day"], "deferables": deferables_data})
 
     tick = Tick.model_validate(
         {
