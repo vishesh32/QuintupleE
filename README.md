@@ -4,7 +4,7 @@
 
 - broker/mosquitto.conf - contains the configuration file for the mosquitto broker.
 
-- dashboard - contains the code for the ui
+- dashboard - contains the code for the UI
 
     - app - contains the code for each page
     
@@ -28,10 +28,16 @@
 
 ## Hardware
 
-- Each harware subsystem has their own folder with the code running on the Pico W
+- Each hardware subsystem has its own folder with the code running on the Pico W
 
 - Server Comms - contains code to run on all picos:
 
-    - Server Comms/mqtt_client.py - to connect, recieve and send messages with the MQTT broker
+    - Server Comms/mqtt_client.py - to connect, receive and send messages with the MQTT broker
     
     - Server Comms/wifi.py - to connect the Pico W to the internet
+
+## Videos
+
+- [Grid UI Video](https://youtu.be/8FKuzf_Gemg) - Explanation of the grid UI used in the dashboard.
+
+- [MPPT Explanation Video](https://youtu.be/OkXbtMY2rME) - Explanation of the MPPT used in demo.
