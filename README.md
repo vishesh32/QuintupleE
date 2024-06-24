@@ -38,6 +38,6 @@
 
 ## Videos
 
-- [Grid UI Video](https://youtu.be/8FKuzf_Gemg) - Explanation of the grid UI used in the dashboard.
+- [Grid UI Video](https://youtu.be/6DRRmUU25tM?si=uK3EfAKqUYMd-oMA) - Explanation of the grid UI used in the dashboard.
 
-- [MPPT Explanation Video](https://youtu.be/OkXbtMY2rME) - Explanation of the MPPT used in demo.
+- [MPPT Explanation Video](https://youtu.be/Mqih-1-pDE8?si=VUjKUSX0d-B3s6bj) - Explanation of the MPPT used in demo.
